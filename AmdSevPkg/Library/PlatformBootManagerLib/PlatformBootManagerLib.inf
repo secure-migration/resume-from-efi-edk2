@@ -33,6 +33,7 @@
   OvmfPkg/OvmfPkg.dec
   SecurityPkg/SecurityPkg.dec
   ShellPkg/ShellPkg.dec
+  AmdSevPkg/Grub/Grub.dec
 
 [LibraryClasses]
   BaseLib
@@ -83,3 +84,4 @@
   gEfiGlobalVariableGuid
   gRootBridgesConnectedEventGroupGuid
   gUefiShellFileGuid
+  gGrubFileGuid

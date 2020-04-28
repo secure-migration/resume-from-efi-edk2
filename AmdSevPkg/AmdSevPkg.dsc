@@ -23,6 +23,7 @@
   BUILD_TARGETS                  = NOOPT|DEBUG|RELEASE
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = AmdSevPkg/AmdSevPkg.fdf
+  PREBUILD			 = sh AmdSevPkg/Grub/grub.sh
 
   #
   # Defines for default states.  These can be changed on the command line.
@@ -869,6 +870,7 @@
     <PcdsFixedAtBuild>
       gEfiShellPkgTokenSpaceGuid.PcdShellLibAutoInitialize|FALSE
   }
+  AmdSevPkg/Grub/Grub.inf
   ShellPkg/Application/Shell/Shell.inf {
     <LibraryClasses>
       ShellCommandLib|ShellPkg/Library/UefiShellCommandLib/UefiShellCommandLib.inf

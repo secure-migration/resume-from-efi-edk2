@@ -1,0 +1,16 @@
+## @file Grub.dec
+# This Package provides all definitions for the Grub Firmware Volume
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = Grub
+  PACKAGE_GUID                   = df4d03b6-5532-4160-abd6-284e22940c29
+  PACKAGE_VERSION                = 1.02
+
+[Guids]
+  # FILE_GUID as defined in Grub.inf
+  gGrubFileGuid              = {0xb5ae312c, 0xbc8a, 0x43b1, {0x9c, 0x62, 0xeb, 0xb8, 0x26, 0xdd, 0x5d, 0x07}}

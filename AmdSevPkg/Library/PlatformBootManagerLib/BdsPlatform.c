@@ -180,6 +180,8 @@ RemoveStaleFvFileOptions (
           DevicePathSubType (Node1) == HW_MEMMAP_DP) &&
         !(DevicePathType (Node1) == MEDIA_DEVICE_PATH &&
           DevicePathSubType (Node1) == MEDIA_PIWG_FW_VOL_DP)) {
+      EfiBootManagerDeleteLoadOptionVariable (
+          BootOptions[Index].OptionNumber, LoadOptionTypeBoot);
       continue;
     }
 
@@ -190,6 +192,8 @@ RemoveStaleFvFileOptions (
     Node2 = NextDevicePathNode (Node1);
     if (DevicePathType (Node2) != MEDIA_DEVICE_PATH ||
         DevicePathSubType (Node2) != MEDIA_PIWG_FW_FILE_DP) {
+      EfiBootManagerDeleteLoadOptionVariable (
+        BootOptions[Index].OptionNumber, LoadOptionTypeBoot);
       continue;
     }
 
@@ -1526,11 +1530,12 @@ PlatformBootManagerAfterConsole (
   EfiBootManagerRefreshAllBootOption ();
 
   //
-  // Register UEFI Shell
+  // Register Grub
   //
   PlatformRegisterFvBootOption (
-    &gUefiShellFileGuid, L"EFI Internal Shell", LOAD_OPTION_ACTIVE
+    &gGrubFileGuid, L"Grub Bootloader", LOAD_OPTION_ACTIVE
     );
+  
 
   RemoveStaleFvFileOptions ();
   SetBootOrderFromQemu ();
