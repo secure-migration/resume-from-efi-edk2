@@ -962,6 +962,8 @@
   }
 !endif
 
+  AmdSevPkg/SevLaunchSecret/SecretDxe/SecretDxe.inf
+
   #
   # TPM support
   #
