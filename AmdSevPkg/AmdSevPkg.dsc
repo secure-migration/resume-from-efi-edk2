@@ -629,6 +629,7 @@
 ################################################################################
 [Components]
   OvmfPkg/ResetVector/ResetVector.inf
+  AmdSevPkg/SevLaunchSecret/SecretSec/SecretSec.inf
 
   #
   # SEC Phase modules

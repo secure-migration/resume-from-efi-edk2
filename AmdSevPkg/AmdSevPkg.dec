@@ -1,0 +1,21 @@
+## @file
+#  EFI/Framework Open Virtual Machine Firmware (OVMF) platform
+#
+#  Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = OvmfPkg
+  PACKAGE_GUID                   = 2daf5f34-50e5-4b9d-b8e3-5562334d87e5
+  PACKAGE_VERSION                = 0.1
+
+[Guids]
+  gSevLaunchSecretGuid			= {0xadf956ad, 0xe98c, 0x484c, {0xae, 0x11, 0xb5, 0x1c, 0x7d, 0x33, 0x64, 0x47}}
+
+[PcdsFixedAtBuild]
+  gSevLaunchSecretGuid.PcdSevLaunchSecretBase|0x0|UINT32|0
+  gSevLaunchSecretGuid.PcdSevLaunchSecretSize|0x0|UINT32|1
