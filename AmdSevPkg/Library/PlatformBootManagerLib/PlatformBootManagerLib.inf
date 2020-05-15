@@ -47,7 +47,6 @@
   BootLogoLib
   DevicePathLib
   PciLib
-  NvVarsFileLib
   QemuFwCfgLib
   QemuFwCfgS3Lib
   QemuLoadImageLib

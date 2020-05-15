@@ -20,8 +20,6 @@
 
 VOID          *mEfiDevPathNotifyReg;
 EFI_EVENT     mEfiDevPathEvent;
-VOID          *mEmuVariableEventReg;
-EFI_EVENT     mEmuVariableEvent;
 UINT16        mHostBridgeDevId;
 
 //
@@ -1314,77 +1312,6 @@ ConnectRecursivelyIfPciMassStorage (
 
 
 /**
-  This notification function is invoked when the
-  EMU Variable FVB has been changed.
-
-  @param  Event                 The event that occurred
-  @param  Context               For EFI compatibility.  Not used.
-
-**/
-VOID
-EFIAPI
-EmuVariablesUpdatedCallback (
-  IN  EFI_EVENT Event,
-  IN  VOID      *Context
-  )
-{
-  DEBUG ((EFI_D_INFO, "EmuVariablesUpdatedCallback\n"));
-  UpdateNvVarsOnFileSystem ();
-}
-
-
-EFI_STATUS
-EFIAPI
-VisitingFileSystemInstance (
-  IN EFI_HANDLE  Handle,
-  IN VOID        *Instance,
-  IN VOID        *Context
-  )
-{
-  EFI_STATUS      Status;
-  STATIC BOOLEAN  ConnectedToFileSystem = FALSE;
-  RETURN_STATUS   PcdStatus;
-
-  if (ConnectedToFileSystem) {
-    return EFI_ALREADY_STARTED;
-  }
-
-  Status = ConnectNvVarsToFileSystem (Handle);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  ConnectedToFileSystem = TRUE;
-  mEmuVariableEvent =
-    EfiCreateProtocolNotifyEvent (
-      &gEfiDevicePathProtocolGuid,
-      TPL_CALLBACK,
-      EmuVariablesUpdatedCallback,
-      NULL,
-      &mEmuVariableEventReg
-      );
-  PcdStatus = PcdSet64S (PcdEmuVariableEvent,
-                (UINT64)(UINTN) mEmuVariableEvent);
-  ASSERT_RETURN_ERROR (PcdStatus);
-
-  return EFI_SUCCESS;
-}
-
-
-VOID
-PlatformBdsRestoreNvVarsFromHardDisk (
-  )
-{
-  VisitAllPciInstances (ConnectRecursivelyIfPciMassStorage);
-  VisitAllInstancesOfProtocol (
-    &gEfiSimpleFileSystemProtocolGuid,
-    VisitingFileSystemInstance,
-    NULL
-    );
-
-}
-
-/**
   Connect with predefined platform connect sequence.
 
   The OEM/IBV can customize with their own connect sequence.
@@ -1478,17 +1405,6 @@ PlatformBootManagerAfterConsole (
   EFI_BOOT_MODE                      BootMode;
 
   DEBUG ((EFI_D_INFO, "PlatformBootManagerAfterConsole\n"));
-
-  if (PcdGetBool (PcdOvmfFlashVariablesEnable)) {
-    DEBUG ((EFI_D_INFO, "PlatformBdsPolicyBehavior: not restoring NvVars "
-      "from disk since flash variables appear to be supported.\n"));
-  } else {
-    //
-    // Try to restore variables from the hard disk early so
-    // they can be used for the other BDS connect operations.
-    //
-    PlatformBdsRestoreNvVarsFromHardDisk ();
-  }
 
   //
   // Get current Boot Mode
