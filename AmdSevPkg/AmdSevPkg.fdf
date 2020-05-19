@@ -163,6 +163,7 @@ INF  MdeModulePkg/Universal/Variable/Pei/VariablePei.inf
 INF  OvmfPkg/SmmAccess/SmmAccessPei.inf
 !endif
 INF  UefiCpuPkg/CpuMpPei/CpuMpPei.inf
+INF  AmdSevPkg/SevLaunchSecret/SecretPei/SecretPei.inf
 
 !if $(TPM_ENABLE) == TRUE
 INF  OvmfPkg/Tcg/Tcg2Config/Tcg2ConfigPei.inf

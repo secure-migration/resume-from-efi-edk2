@@ -670,6 +670,7 @@
   OvmfPkg/SmmAccess/SmmAccessPei.inf
 !endif
   UefiCpuPkg/CpuMpPei/CpuMpPei.inf
+  AmdSevPkg/SevLaunchSecret/SecretPei/SecretPei.inf
 
 !if $(TPM_ENABLE) == TRUE
   OvmfPkg/Tcg/Tcg2Config/Tcg2ConfigPei.inf
