@@ -42,10 +42,13 @@
   SecurityPkg/SecurityPkg.dec
   UefiCpuPkg/UefiCpuPkg.dec
   OvmfPkg/OvmfPkg.dec
+  AmdSevPkg/AmdSevPkg.dec
+  AmdSevPkg/SevLaunchSecret/MigrationHandler/MigrationHandler.dec
 
 [Guids]
   gEfiMemoryTypeInformationGuid
   gEfiXenInfoGuid
+  gSevLaunchSecretGuid
 
 [LibraryClasses]
   BaseLib
@@ -101,6 +104,7 @@
   gUefiCpuPkgTokenSpaceGuid.PcdCpuMaxLogicalProcessorNumber
   gUefiCpuPkgTokenSpaceGuid.PcdCpuBootLogicalProcessorNumber
   gUefiCpuPkgTokenSpaceGuid.PcdCpuApStackSize
+  gSevLaunchSecretGuid.PcdSevIsMigrationHandler
 
 [FixedPcd]
   gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseAddress

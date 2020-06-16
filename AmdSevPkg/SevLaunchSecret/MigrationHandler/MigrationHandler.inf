@@ -1,0 +1,50 @@
+## @file
+#  
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = MigrationHandler
+  # This will need to be a guid.
+  FILE_GUID                      = 5c2978f4-f175-434b-9e6c-9b03bd7e346f
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = MigrationHandlerMain
+
+[Sources]
+  MigrationHandler.c
+
+[Packages]
+  AmdSevPkg/AmdSevPkg.dec
+  AmdSevPkg/SevLaunchSecret/MigrationHandler/MigrationHandler.dec
+  MdePkg/MdePkg.dec
+  ShellPkg/ShellPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DebugLib
+  #UefiBootServicesTableLib
+  #UefiDriverEntryPoint
+  UefiLib
+  UefiBootServicesTableLib
+  PrintLib
+
+[Guids]
+  #gSevLaunchSecretGuid
+  gMigrationHandlerFileGuid
+
+[FixedPcd]
+  # replace these with mailbox addr and size
+  gSevLaunchSecretGuid.PcdSevLaunchSecretBase
+  gSevLaunchSecretGuid.PcdSevLaunchSecretSize
+
+[Pcd]
+  gSevLaunchSecretGuid.PcdSevIsMigrationHandler
+
+[Depex]
+  TRUE

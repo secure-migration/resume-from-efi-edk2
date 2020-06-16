@@ -1446,12 +1446,22 @@ PlatformBootManagerAfterConsole (
   EfiBootManagerRefreshAllBootOption ();
 
   //
-  // Register Grub
+  // Register Grub or the Migration Handler
+  // One of these will end up as the only boot option
+  // and will end up being run. 
   //
-  PlatformRegisterFvBootOption (
-    &gGrubFileGuid, L"Grub Bootloader", LOAD_OPTION_ACTIVE
-    );
-  
+  if(PcdGetBool(PcdSevIsMigrationHandler)){
+    PlatformRegisterFvBootOption (
+      &gMigrationHandlerFileGuid, L"Migration Handler", LOAD_OPTION_ACTIVE
+      );
+  }
+  else {
+     /*
+     PlatformRegisterFvBootOption (
+      &gGrubFileGuid, L"Grub Bootloader", LOAD_OPTION_ACTIVE
+      );
+      */
+  }
 
   RemoveStaleFvFileOptions ();
   SetBootOrderFromQemu ();

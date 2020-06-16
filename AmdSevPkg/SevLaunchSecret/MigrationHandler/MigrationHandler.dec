@@ -1,0 +1,16 @@
+## @file MigrationHandler.dec
+# Some definitions for 
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = MigrationHandler
+  PACKAGE_GUID                   = 8c118ab9-b0e4-4008-b05f-cf51dfdf8fb7
+  PACKAGE_VERSION                = 1.02
+
+[Guids]
+  # FILE_GUID as defined in Grub.inf
+  gMigrationHandlerFileGuid             = {0x5c2978f4, 0xf175, 0x434b, {0x9e,0x6c,0x9b,0x03,0xbd,0x7e,0x34,0x6f}}

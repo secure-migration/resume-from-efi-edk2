@@ -2,6 +2,7 @@
 #include <Library/UefiLib.h>
 #include <Library/UefiDriverEntryPoint.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/DebugLib.h>
 
 struct {
   UINT32	base;

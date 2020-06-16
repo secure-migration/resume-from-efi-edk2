@@ -19,3 +19,6 @@
 [PcdsFixedAtBuild]
   gSevLaunchSecretGuid.PcdSevLaunchSecretBase|0x0|UINT32|0
   gSevLaunchSecretGuid.PcdSevLaunchSecretSize|0x0|UINT32|1
+
+[PcdsDynamic, PcdsDynamicEx]
+  gSevLaunchSecretGuid.PcdSevIsMigrationHandler|FALSE|BOOLEAN|3
