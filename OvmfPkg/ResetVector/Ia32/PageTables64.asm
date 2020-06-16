@@ -88,7 +88,7 @@ SetCr3ForPageTables64:
     ; If SEV is enabled, C-bit is always above 31
     sub     eax, 32
     bts     edx, eax
-
+    
 SevNotActive:
 
     ;

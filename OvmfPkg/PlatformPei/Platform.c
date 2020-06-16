@@ -795,6 +795,9 @@ InitializePlatform (
 
   InstallClearCacheCallback ();
   AmdSevInitialize ();
+
+  UPDATE_BOOLEAN_PCD_FROM_FW_CFG(PcdSevIsMigrationHandler);
+
   MiscInitialization ();
   InstallFeatureControlCallback ();
 
