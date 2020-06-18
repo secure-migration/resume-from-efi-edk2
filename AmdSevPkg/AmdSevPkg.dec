@@ -19,6 +19,9 @@
 [PcdsFixedAtBuild]
   gSevLaunchSecretGuid.PcdSevLaunchSecretBase|0x0|UINT32|0
   gSevLaunchSecretGuid.PcdSevLaunchSecretSize|0x0|UINT32|1
+  gSevLaunchSecretGuid.PcdSevMigrationMailboxBase|0x0|UINT32|4
+  gSevLaunchSecretGuid.PcdSevMigrationMailboxSize|0x0|UINT32|5
+  
 
 [PcdsDynamic, PcdsDynamicEx]
   gSevLaunchSecretGuid.PcdSevIsMigrationHandler|FALSE|BOOLEAN|3

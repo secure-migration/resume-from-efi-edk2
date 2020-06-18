@@ -12,10 +12,10 @@
   FILE_GUID                      = 5c2978f4-f175-434b-9e6c-9b03bd7e346f
   MODULE_TYPE                    = UEFI_APPLICATION
   VERSION_STRING                 = 1.0
-  ENTRY_POINT                    = MigrationHandlerMain
 
 [Sources]
   MigrationHandler.c
+  RestoreState.nasm
 
 [Packages]
   AmdSevPkg/AmdSevPkg.dec
@@ -45,6 +45,7 @@
 
 [Pcd]
   gSevLaunchSecretGuid.PcdSevIsMigrationHandler
+  gSevLaunchSecretGuid.PcdSevMigrationMailboxBase
 
 [Depex]
   TRUE
