@@ -95,29 +95,29 @@ MigrationHandlerMain(
 
   // put some state into regs for testing
   // // this is supposed to jump into grub....
-  gSavedContext.ax = 0x000000000000001c; 
-  gSavedContext.bx = 0x000000007f22c018;
-  gSavedContext.cx = 0x0000000000000010;
-  gSavedContext.dx = 0x0000000000000064;
-  gSavedContext.si = 0x000000007fb171b4;
-  gSavedContext.di = 0x000000007f22c018;
-  gSavedContext.bp = 0x000000007f22c018;
-  gSavedContext.sp = 0x000000007fb17070;
-  gSavedContext.r8 = 0x8;
-  gSavedContext.r9 = 0x0000000000000064;
-  gSavedContext.r10 = 0;
-  gSavedContext.r11 = 0x0;
-  gSavedContext.r12 = 0x8000000000000007;
-  gSavedContext.r13 = 0x04;
-  gSavedContext.r14 = 0x010;
-  gSavedContext.r15 = 0x000000007e24b3ea;
-  gSavedContext.ip = 0x000000007e69dbf4;
-  gSavedContext.flags = 0x293;
-  gSavedContext.cs = 0x38;
-  gSavedContext.ss = 0x30;
-
-  asm("jmp RestoreRegisters");
-
+  /* gSavedContext.ax = 0x000000000000001c;  */
+  /* gSavedContext.bx = 0x000000007f22c018; */
+  /* gSavedContext.cx = 0x0000000000000010; */
+  /* gSavedContext.dx = 0x0000000000000064; */
+  /* gSavedContext.si = 0x000000007fb171b4; */
+  /* gSavedContext.di = 0x000000007f22c018; */
+  /* gSavedContext.bp = 0x000000007f22c018; */
+  /* gSavedContext.sp = 0x000000007fb17070; */
+  /* gSavedContext.r8 = 0x8; */
+  /* gSavedContext.r9 = 0x0000000000000064; */
+  /* gSavedContext.r10 = 0; */
+  /* gSavedContext.r11 = 0x0; */
+  /* gSavedContext.r12 = 0x8000000000000007; */
+  /* gSavedContext.r13 = 0x04; */
+  /* gSavedContext.r14 = 0x010; */
+  /* gSavedContext.r15 = 0x000000007e24b3ea; */
+  /* gSavedContext.ip = 0x000000007e69dbf4; */
+  /* gSavedContext.flags = 0x293; */
+  /* gSavedContext.cs = 0x38; */
+  /* gSavedContext.ss = 0x30; */
+  /*  */
+  /* asm("jmp RestoreRegisters"); */
+  /*  */
   while(1) {
     
     // wait for command
