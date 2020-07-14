@@ -43,30 +43,21 @@ static void SetCPUState()
   gSavedGDTDesc.size = 0x0000007f;
 }
 
-//void* GetPage(void) {
-EFI_PHYSICAL_ADDRESS GetPage(void) {
-  DebugPrint(DEBUG_ERROR, "MIGRATION HANDLER GetPage start\n");
-  //void* page = AllocateAlignedPages (1, BASE_4KB);
-  EFI_PHYSICAL_ADDRESS addr;
-  EFI_STATUS Status;
-  Status = gBS->AllocatePages (AllocateAnyPages, EfiBootServicesData, 1, &addr);
-  ASSERT_EFI_ERROR (Status);
-  // TODO: ZeroMem(page, SIZE_4KB);
-  return addr;
-}
+// Defined in RestoreState.nasm
+void RestoreRegisters(void);
 
-void PrepareMemory(void) {
-  //EFI_PHYSICAL_ADDRESS pmd = GetPage();
-  //EFI_PHYSICAL_ADDRESS pud = GetPage();
+// setup a page table for stage 2 of the trampoline 
+// that maps the code for both stage 2 and stage 3.
+static void GenerateIntermediatePageTables(){
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pgd = %p\n", pgd);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pud = %p\n", pud);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pmd = %p\n", pmd);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pte = %p\n", pte);
+
 }
 
-// Defined in RestoreState.nasm
-void RestoreRegisters(void);
 
+// Migration Handler Main
 EFI_STATUS
 EFIAPI
 MigrationHandlerMain(
@@ -74,32 +65,28 @@ MigrationHandlerMain(
   IN EFI_SYSTEM_TABLE     *SystemTable
   )
 {
+  // Setup the mailbox
   UINT64 params_base = PcdGet32(PcdSevMigrationMailboxBase); 
   volatile struct sev_mh_params *params = (void *) params_base;   
   
-
-  // this doesn't seem to do anything? 
-  // maybe prints to a log somewhere
-  DEBUG((DEBUG_ERROR,"MIGRATION HANDLER 111\n")); 
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER 222\n"); 
-
-  // this requires stdio (see above)
-  //printf("MIGRATION HANDLER\n");
-
-  // This causes a nice panic.
-  //Print(L"MIGRATION HANDLER\n"); 
-
-  //DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER MyTarget = %016x\n", (unsigned long)MyTarget);
-
+  // Trampoline code can live here temporarily.
+  
+  // populate our state structs
   SetCPUState();
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After SetCPUState 222.8 gSavedRIP = %016lx\n", gSavedRIP);
-  PrepareMemory();
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After PrepareMemory 333 RestoreRegisters = %p\n", RestoreRegisters);
+  
+  // we might want another function before this puts pages in the 
+  // correct location
+  GenerateIntermediatePageTables();
+
+  // we don't jump here directly anymore. for now this is a place
+  // holder for our jump to stage 2
   RestoreRegisters();
 
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After RestoreRegisters 444\n");
   return 0;
 
+  // Eventually we will use this loop to check the mailbox 
+  // and encrypt/decrypt pages or trampoline on command.
   while(1) {
     
     // wait for command
