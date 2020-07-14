@@ -15,6 +15,7 @@
 
 [Sources]
   MigrationHandler.c
+  MigrationHandler.h
   RestoreState.nasm
 
 [Packages]
