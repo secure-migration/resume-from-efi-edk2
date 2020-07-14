@@ -6,6 +6,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PrintLib.h>
+#include <Library/MemoryAllocationLib.h>
 
 // This won't build
 // #include <stdio.h>
@@ -56,10 +57,21 @@ struct desc_ptr {
 // Variables used by RestoreState.nasm
 //
 UINT64 gSavedRIP;
+UINT64 gSavedCR0;
+UINT64 gSavedCR2;
 UINT64 gSavedCR3;
 UINT64 gSavedCR4;
-struct desc_ptr gSavedGDT;
+struct desc_ptr gSavedGDTDesc;
 struct pt_regs gSavedContext;
+
+//
+// Each level has 512 entries of 64-bit each (which together fit in one 4096-byte page)
+//
+#define ENTRIES (EFI_PAGE_SIZE / sizeof(UINT64))
+extern UINT64 pgd[ENTRIES];
+extern UINT64 pud[ENTRIES];
+extern UINT64 pmd[ENTRIES];
+extern UINT64 pte[ENTRIES];
 
 // Mailbox struct for communicating with VMM
 struct sev_mh_params {
@@ -70,6 +82,69 @@ struct sev_mh_params {
     int go;
     int done;
 };
+
+void MyTarget(void) {
+  DEBUG((DEBUG_ERROR,"MIGRATION HANDLER - inside MyTarget 111\n"));
+}
+
+static void SetCPUState()
+{
+  gSavedContext.ax    = 0xffffffff886f2f20;
+  gSavedContext.bx    = 0x0;
+  gSavedContext.cx    = 0x1;
+  gSavedContext.dx    = 0x236e;
+  gSavedContext.si    = 0x87;
+  gSavedContext.di    = 0x0;
+  gSavedContext.bp    = 0xffffffff89203e20;
+  gSavedContext.sp    = 0xffffffff89203e00;
+  gSavedContext.r8    = 0x0000000c4ff4c4e3;
+  gSavedContext.r9    = 0x0000000000000200;
+  gSavedContext.r10   = 0x0;
+  gSavedContext.r11   = 0x0;
+  gSavedContext.r12   = 0x0;
+  gSavedContext.r13   = 0xffffffff89213840;
+  gSavedContext.r14   = 0x0;
+  gSavedContext.r15   = 0x0;
+  gSavedContext.flags = 0x246;
+  gSavedContext.ip    = 0xffffffff886f330e; // linux top ?
+  //gSavedContext.ip    = 0x7f6b0a481d26; // grub?
+  //gSavedContext.ip    = (unsigned long)(MyTarget); // 0x7f6b0a481d26;
+  gSavedContext.cs    = 0x10;
+  gSavedContext.ss    = 0x18;
+
+  gSavedRIP = gSavedContext.ip;
+  gSavedCR0 = 0x80050033;
+  gSavedCR2 = 0x000055fc38529000;
+  gSavedCR3 = 0x0000000037430000;
+  gSavedCR4 = 0x3406f0;
+
+  gSavedGDTDesc.address = 0xfffffe0000001000;
+  gSavedGDTDesc.size = 0x0000007f;
+}
+
+//void* GetPage(void) {
+EFI_PHYSICAL_ADDRESS GetPage(void) {
+  DebugPrint(DEBUG_ERROR, "MIGRATION HANDLER GetPage start\n");
+  //void* page = AllocateAlignedPages (1, BASE_4KB);
+  EFI_PHYSICAL_ADDRESS addr;
+  EFI_STATUS Status;
+  Status = gBS->AllocatePages (AllocateAnyPages, EfiBootServicesData, 1, &addr);
+  ASSERT_EFI_ERROR (Status);
+  // TODO: ZeroMem(page, SIZE_4KB);
+  return addr;
+}
+
+void PrepareMemory(void) {
+  //EFI_PHYSICAL_ADDRESS pmd = GetPage();
+  //EFI_PHYSICAL_ADDRESS pud = GetPage();
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pgd = %p\n", pgd);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pud = %p\n", pud);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pmd = %p\n", pmd);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pte = %p\n", pte);
+}
+
+// Defined in RestoreState.nasm
+void RestoreRegisters(void);
 
 EFI_STATUS
 EFIAPI
@@ -84,8 +159,8 @@ MigrationHandlerMain(
 
   // this doesn't seem to do anything? 
   // maybe prints to a log somewhere
-  DEBUG((DEBUG_ERROR,"MIGRATION HANDLER\n")); 
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER\n"); 
+  DEBUG((DEBUG_ERROR,"MIGRATION HANDLER 111\n")); 
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER 222\n"); 
 
   // this requires stdio (see above)
   //printf("MIGRATION HANDLER\n");
@@ -93,31 +168,17 @@ MigrationHandlerMain(
   // This causes a nice panic.
   //Print(L"MIGRATION HANDLER\n"); 
 
-  // put some state into regs for testing
-  // // this is supposed to jump into grub....
-  /* gSavedContext.ax = 0x000000000000001c;  */
-  /* gSavedContext.bx = 0x000000007f22c018; */
-  /* gSavedContext.cx = 0x0000000000000010; */
-  /* gSavedContext.dx = 0x0000000000000064; */
-  /* gSavedContext.si = 0x000000007fb171b4; */
-  /* gSavedContext.di = 0x000000007f22c018; */
-  /* gSavedContext.bp = 0x000000007f22c018; */
-  /* gSavedContext.sp = 0x000000007fb17070; */
-  /* gSavedContext.r8 = 0x8; */
-  /* gSavedContext.r9 = 0x0000000000000064; */
-  /* gSavedContext.r10 = 0; */
-  /* gSavedContext.r11 = 0x0; */
-  /* gSavedContext.r12 = 0x8000000000000007; */
-  /* gSavedContext.r13 = 0x04; */
-  /* gSavedContext.r14 = 0x010; */
-  /* gSavedContext.r15 = 0x000000007e24b3ea; */
-  /* gSavedContext.ip = 0x000000007e69dbf4; */
-  /* gSavedContext.flags = 0x293; */
-  /* gSavedContext.cs = 0x38; */
-  /* gSavedContext.ss = 0x30; */
-  /*  */
-  /* asm("jmp RestoreRegisters"); */
-  /*  */
+  //DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER MyTarget = %016x\n", (unsigned long)MyTarget);
+
+  SetCPUState();
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After SetCPUState 222.8 gSavedRIP = %016lx\n", gSavedRIP);
+  PrepareMemory();
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After PrepareMemory 333 RestoreRegisters = %p\n", RestoreRegisters);
+  RestoreRegisters();
+
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After RestoreRegisters 444\n");
+  return 0;
+
   while(1) {
     
     // wait for command

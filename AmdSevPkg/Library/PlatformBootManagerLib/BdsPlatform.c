@@ -1456,11 +1456,11 @@ PlatformBootManagerAfterConsole (
       );
   }
   else {
-     /*
+     
      PlatformRegisterFvBootOption (
       &gGrubFileGuid, L"Grub Bootloader", LOAD_OPTION_ACTIVE
       );
-      */
+    
   }
 
   RemoveStaleFvFileOptions ();
