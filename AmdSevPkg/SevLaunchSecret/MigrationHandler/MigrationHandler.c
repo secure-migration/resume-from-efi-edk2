@@ -49,10 +49,45 @@ void RestoreRegisters(void);
 // setup a page table for stage 2 of the trampoline 
 // that maps the code for both stage 2 and stage 3.
 static void GenerateIntermediatePageTables(){
+  // this should be the address of restore_registers
+  // in the image kernel/ovmf
+  // since OVMF has a direct mapping, these should be the same?
+  unsigned long restore_jump_address = 0xC0000;
+  unsigned long jump_address_phys = restore_jump_address;
+
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pgd = %p\n", pgd);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pud = %p\n", pud);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pmd = %p\n", pmd);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pte = %p\n", pte);
+
+  // not sure
+  pgprot_t pgtable_prot = __pgprot(_KERNPG_TABLE);
+  pgprot_t pmd_text_prot = __pgprot(__PAGE_KERNEL_LARGE_EXEC);
+
+  /* Filter out unsupported __PAGE_KERNEL* bits: */
+  // look into this more
+  /* pgprot_val(pmd_text_prot) &= __default_kernel_pte_mask; */
+  /* pgprot_val(pgtable_prot)  &= __default_kernel_pte_mask; */
+
+  // i think we can just use memcpy here
+  // here we are setting an entry in the pmd,
+  // the destination is an index into the pmd that corresponds 
+  // with the virtual address 
+  // the source is the entry specifying the physical addres 
+  // The last argument should either be sizeof(pmd_t) or sizeof(pmdval)
+  // I
+  memcpy(pmd + pmd_index(restore_jump_address),&__pmd((jump_address_phys & PMD_MASK) | pgprot_val(pmd_text_prot)),sizeof(pmdval_t));
+
+  // basically the same 
+  // in the kernel, this line uses the __pa macro to find the 
+  // the phyiscal address of the omd (this entry points to the 
+  // next node in the tree). since OVMF is direct-mapped, 
+  // i think we can just use the address of the pmd directly. 
+  // have to do some suspicious casting of pmd. 
+  memcpy(pud + pud_index(restore_jump_address),&__pud((UINT64)pmd | pgprot_val(pgtable_prot)),sizeof(pudval_t));
+
+  pgd_t new_pgd = __pgd((UINT64)pud | pgprot_val(pgtable_prot));
+  memcpy(pgd + pgd_index(restore_jump_address), &new_pgd, sizeof(pgdval_t));
 
 }
 
