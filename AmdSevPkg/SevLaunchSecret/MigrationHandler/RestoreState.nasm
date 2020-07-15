@@ -12,6 +12,10 @@ extern ASM_PFX(gSavedCR4)
 extern ASM_PFX(gSavedRIP)
 extern ASM_PFX(gSavedGDTDesc)
 extern ASM_PFX(gSavedContext)
+extern ASM_PFX(gRelocatedRestoreRegisters)
+extern ASM_PFX(gTempPGT)
+extern ASM_PFX(gMMUCR4Features)
+extern ASM_PFX(gRelocatedRestoreStep2)
 
 ; Based on struct pt_regs from Linux
 %define PT_REGS_R15     0
@@ -64,6 +68,50 @@ extern ASM_PFX(gSavedContext)
 %endif
 %endmacro
 
+global ASM_PFX(RestoreStep1)
+ASM_PFX(RestoreStep1):
+
+    mov     r8, [gRelocatedRestoreRegisters]
+    mov     r9, [gSavedCR3]
+
+    mov     rax, [gTempPGT]
+    mov     rbx, [gMMUCR4Features]
+
+    mov     rcx, [gRelocatedRestoreStep2]
+    jmp     rcx
+
+; Inputs:
+;   rax - Temporary PGD
+;   rbx - Content of CR4
+;   r8  - Address of target RestoreRegisters (must be mapped both
+;         in temporay and target page tables)
+;
+ALIGN EFI_PAGE_SIZE
+global ASM_PFX(RestoreStep2)
+ASM_PFX(RestoreStep2):
+    ; Switch to temporary PGD (from rax)
+    mov     cr3, rax
+
+    ; Turn off PGE (Page Global Enabled)
+    mov     rcx, rbx
+    and     rcx, ~X86_CR4_PGE
+    mov     cr4, rcx
+
+    ; Force flush TLB
+    mov     rcx, cr3
+    mov     cr3, rcx
+    mov     rbx, cr4
+
+    ; Turn PGE back on
+    mov     cr4, rbx
+
+    ; Note: Not using the pbe loop from linux kernel
+
+    ; Jump to RestoreRegisters
+    jmp	r8
+
+; Inputs:
+;   r9 - The target PGD
 ALIGN EFI_PAGE_SIZE
 global ASM_PFX(RestoreRegisters)
 ASM_PFX(RestoreRegisters):

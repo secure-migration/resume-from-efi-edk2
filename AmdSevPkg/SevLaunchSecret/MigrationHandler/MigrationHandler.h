@@ -70,6 +70,10 @@ UINT64 gSavedCR4;
 struct desc_ptr gSavedGDTDesc;
 struct pt_regs gSavedContext;
 
+UINT64 gRelocatedRestoreRegisters;
+UINT64 gTempPGT;
+UINT64 gMMUCR4Features;
+UINT64 gRelocatedRestoreStep2;
 
 /*
  * CREATING INTERMEDIATE PAGE TABLES
