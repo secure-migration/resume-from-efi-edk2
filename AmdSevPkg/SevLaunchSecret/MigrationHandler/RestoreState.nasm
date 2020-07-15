@@ -1,3 +1,6 @@
+
+%define ENABLE_DEBUG
+
   DEFAULT REL
   SECTION .text
 
@@ -32,100 +35,121 @@ extern ASM_PFX(gSavedContext)
 
 ;
 ;arg 1:Char to print
+;dx must be already set to the debug console port (0x402)
 ;
-%macro DEBUG_PUT_CHAR   1
-    mov     dx, 0x402
+%macro DBG_PUT_CHAR   1
     mov     al, %1
     out     dx, al
 %endmacro
 
+%macro DBG_PUT_CHARS 1
+    %strlen len %1
+    %assign i 0
+    %rep len
+        %assign i i+1
+        %substr curr_char %1 i
+        DBG_PUT_CHAR curr_char
+    %endrep
+%endmacro
+
+;
+;arg 1: String to print (CRLF is added)
+;
+%macro DBG_PRINT 1
+%ifdef ENABLE_DEBUG
+    mov     dx, 0x402
+    DBG_PUT_CHARS %1
+    DBG_PUT_CHAR 0x0d
+    DBG_PUT_CHAR 0x0a
+%endif
+%endmacro
 
 ALIGN EFI_PAGE_SIZE
 global ASM_PFX(RestoreRegisters)
 ASM_PFX(RestoreRegisters):
 
-    DEBUG_PUT_CHAR 'A'
+    DBG_PRINT 'DBG:100'
     mov     r9, [gSavedCR3]
-    DEBUG_PUT_CHAR '2'
+    DBG_PRINT 'DBG:101'
     mov     cr3, r9
 
-    DEBUG_PUT_CHAR 'B'
+    DBG_PRINT 'DBG:110'
     mov     r9, [gSavedCR0]
     mov     cr0, r9
-    DEBUG_PUT_CHAR 'C'
+    DBG_PRINT 'DBG:120'
     mov     r9, [gSavedCR2]
     mov     cr2, r9
 
-    DEBUG_PUT_CHAR 'D'
+    DBG_PRINT 'DBG:130'
     mov     rax, [gSavedCR4]
     mov     rdx, rax
     and     rdx, ~X86_CR4_PGE
     mov     cr4, rdx    ; turn off PGE
-    DEBUG_PUT_CHAR 'E'
+    DBG_PRINT 'DBG:140'
     mov     rcx, cr3    ; flush TLB
     mov     cr3, rcx    ; flush TLB
-    DEBUG_PUT_CHAR 'F'
+    DBG_PRINT 'DBG:150'
     mov     cr4, rax    ; turn PGE back on
-    DEBUG_PUT_CHAR 'G'
+    DBG_PRINT 'DBG:160'
 
     ;mov     rax, [gSavedCR3] ; dummy reference
     ;mov     rax, [MyTarget]  ; dummy reference
 
 
-    DEBUG_PUT_CHAR 'M'
+    DBG_PRINT 'DBG:170'
     mov     rax, gSavedContext
 
-    DEBUG_PUT_CHAR 'N'
+    DBG_PRINT 'DBG:180'
     ; Restore all registers except rax
     mov     rsp, [rax + PT_REGS_SP]
     mov     rbp, [rax + PT_REGS_BP]
     mov     rsi, [rax + PT_REGS_SI]
     mov     rdi, [rax + PT_REGS_DI]
-    DEBUG_PUT_CHAR 'O'
+    DBG_PRINT 'DBG:190'
     mov     rbx, [rax + PT_REGS_BX]
     mov     rcx, [rax + PT_REGS_CX]
     mov     rdx, [rax + PT_REGS_DX]
     mov     r8,  [rax + PT_REGS_R8]
-    DEBUG_PUT_CHAR 'P'
+    DBG_PRINT 'DBG:200'
     mov     r9,  [rax + PT_REGS_R9]
     mov     r10, [rax + PT_REGS_R10]
     mov     r11, [rax + PT_REGS_R11]
     mov     r12, [rax + PT_REGS_R12]
-    DEBUG_PUT_CHAR 'Q'
+    DBG_PRINT 'DBG:210'
     mov     r13, [rax + PT_REGS_R13]
     mov     r14, [rax + PT_REGS_R14]
     mov     r15, [rax + PT_REGS_R15]
-    DEBUG_PUT_CHAR 'R'
+    DBG_PRINT 'DBG:220'
 
     ; Restore flags
     push    qword [rax + PT_REGS_FLAGS]
     popf
 
-    DEBUG_PUT_CHAR 'S'
+    DBG_PRINT 'DBG:230'
     mov     ax, 0x0010
     mov     cs, ax
-    DEBUG_PUT_CHAR 'T'
+    DBG_PRINT 'DBG:240'
     mov     ax, 0x0018
     mov     ss, ax
-    DEBUG_PUT_CHAR 'U'
+    DBG_PRINT 'DBG:250'
 
-    DEBUG_PUT_CHAR 'V'
+    DBG_PRINT 'DBG:260'
     xor     ax, ax
     mov     es, ax
     mov     ds, ax
-    DEBUG_PUT_CHAR 'W'
+    DBG_PRINT 'DBG:270'
     mov     fs, ax
     mov     gs, ax
 
-    DEBUG_PUT_CHAR 'X'
+    DBG_PRINT 'DBG:280'
     ; Restore GDT
     lgdt    [gSavedGDTDesc]
 
-    DEBUG_PUT_CHAR 'Y'
+    DBG_PRINT 'DBG:290'
     mov     rax, [gSavedRIP]
-    DEBUG_PUT_CHAR 'Z'
+    DBG_PRINT 'DBG:300'
     jmp     rax
-    DEBUG_PUT_CHAR 'a'
+    DBG_PRINT 'DBG:400'
     ret
 
 
