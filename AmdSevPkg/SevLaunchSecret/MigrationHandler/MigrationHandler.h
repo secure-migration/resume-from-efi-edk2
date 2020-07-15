@@ -127,7 +127,7 @@ struct pt_regs gSavedContext;
 // The kernel does this weird thing for type checking 
 // I don't entirely understand why or if we need both.
 typedef struct { unsigned long pgprot; } pgprot_t;
-typedef unsigned long pgprot_t;
+//typedef unsigned long pgprot_t;
 
 #define pgprot_val(x)   ((x).pgprot)
 
