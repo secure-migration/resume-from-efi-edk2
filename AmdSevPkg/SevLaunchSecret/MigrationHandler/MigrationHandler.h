@@ -256,6 +256,10 @@ typedef struct { unsigned long pgprot; } pgprot_t;
 #define PAGE_SIZE 4096
 #define FIXMAP_PMD_NUM 2 // not totally sure about this
 
+// not really sure about this
+#define __default_kernel_pte_mask ~0
+
+
 /*
  * MHm <--> VMM Communication
  *

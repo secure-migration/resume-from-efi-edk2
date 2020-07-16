@@ -45,38 +45,35 @@ static void SetCPUState()
 
 // Defined in RestoreState.nasm
 void RestoreRegisters(void);
+void RestoreStep1(void);
+void RestoreStep2(void);
 
-// setup a page table for stage 2 of the trampoline 
-// that maps the code for both stage 2 and stage 3.
-static void GenerateIntermediatePageTables(){
-  // this should be the address of restore_registers
-  // in the image kernel/ovmf
-  // since OVMF has a direct mapping, these should be the same?
-  unsigned long restore_jump_address = 0xC0000;
-  unsigned long jump_address_phys = restore_jump_address;
+// this seems a bit too simple. for one thing, are we actually doing 
+// all four levels? 
+// do we also need to mark the page as ex?
+static void AddPageToMapping(unsigned long va, unsigned long pa){
+  pgd_t new_pgd;
+  pud_t new_pud;
+  pmd_t new_pmd;
+  /* pte_t new_pte; */
 
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pgd = %p\n", pgd);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pud = %p\n", pud);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pmd = %p\n", pmd);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pte = %p\n", pte);
-
-  // not sure
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER: Mapping %p to %p \n", va, pa);
   pgprot_t pgtable_prot = __pgprot(_KERNPG_TABLE);
   pgprot_t pmd_text_prot = __pgprot(__PAGE_KERNEL_LARGE_EXEC);
 
   /* Filter out unsupported __PAGE_KERNEL* bits: */
   // look into this more
-  /* pgprot_val(pmd_text_prot) &= __default_kernel_pte_mask; */
-  /* pgprot_val(pgtable_prot)  &= __default_kernel_pte_mask; */
+  // does nothing with our current setup
+  pgprot_val(pmd_text_prot) &= __default_kernel_pte_mask;
+  pgprot_val(pgtable_prot)  &= __default_kernel_pte_mask;
 
   // i think we can just use memcpy here
   // here we are setting an entry in the pmd,
   // the destination is an index into the pmd that corresponds 
   // with the virtual address 
   // the source is the entry specifying the physical addres 
-  // The last argument should either be sizeof(pmd_t) or sizeof(pmdval)
-  // I
-  memcpy(pmd + pmd_index(restore_jump_address),&__pmd((jump_address_phys & PMD_MASK) | pgprot_val(pmd_text_prot)),sizeof(pmdval_t));
+  new_pmd = __pmd((pa & PMD_MASK) | pgprot_val(pmd_text_prot));
+  memcpy(pmd + pmd_index(va),&new_pmd,sizeof(pmd_t));
 
   // basically the same 
   // in the kernel, this line uses the __pa macro to find the 
@@ -84,12 +81,30 @@ static void GenerateIntermediatePageTables(){
   // next node in the tree). since OVMF is direct-mapped, 
   // i think we can just use the address of the pmd directly. 
   // have to do some suspicious casting of pmd. 
-  memcpy(pud + pud_index(restore_jump_address),&__pud((UINT64)pmd | pgprot_val(pgtable_prot)),sizeof(pudval_t));
+  new_pud = __pud((UINT64)pmd | pgprot_val(pgtable_prot));
+  memcpy(pud + pud_index(va),&new_pud,sizeof(pud_t));
 
-  pgd_t new_pgd = __pgd((UINT64)pud | pgprot_val(pgtable_prot));
-  memcpy(pgd + pgd_index(restore_jump_address), &new_pgd, sizeof(pgdval_t));
+  new_pgd = __pgd((UINT64)pud | pgprot_val(pgtable_prot));
+  memcpy(pgd + pgd_index(va), &new_pgd, sizeof(pgd_t));
 
+  // i think we need something with the pte as well
 }
+
+// setup a page table for stage 2 of the trampoline 
+// that maps the code for both stage 2 and stage 3.
+static void GenerateIntermediatePageTables(){
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pgd = %p\n", pgd);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pud = %p\n", pud);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pmd = %p\n", pmd);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pte = %p\n", pte);
+
+  // since OVMF has a direct mapping, VA = PA
+  AddPageToMapping(gRelocatedRestoreStep2,gRelocatedRestoreStep2);
+  AddPageToMapping(gRelocatedRestoreRegisters,gRelocatedRestoreRegisters);
+
+  gTempPGT = (UINT64)pgd;
+}
+
 
 
 // Migration Handler Main
@@ -109,14 +124,17 @@ MigrationHandlerMain(
   // populate our state structs
   SetCPUState();
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After SetCPUState 222.8 gSavedRIP = %016lx\n", gSavedRIP);
-  
-  // we might want another function before this puts pages in the 
-  // correct location
+ 
+  // do we actually need to relocate this? can't we just leave it where 
+  // it is and just jump to the function in asm
+  // at the moment i am not sure what the value of gRelocatedBlah is
+  // do we need to point that to a Pcd??
+  memcpy((void *)gRelocatedRestoreStep2,RestoreStep2,PAGE_SIZE);
+  memcpy((void *)gRelocatedRestoreRegisters,RestoreRegisters,PAGE_SIZE);
+
   GenerateIntermediatePageTables();
 
-  // we don't jump here directly anymore. for now this is a place
-  // holder for our jump to stage 2
-  RestoreRegisters();
+  RestoreStep1(); 
 
   return 0;
 
@@ -134,7 +152,6 @@ MigrationHandlerMain(
         break;
 
     }
-
 
     params->go = 0;
     params->done = 1;
