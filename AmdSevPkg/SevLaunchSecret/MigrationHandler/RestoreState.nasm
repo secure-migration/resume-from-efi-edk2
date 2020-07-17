@@ -71,12 +71,16 @@ extern ASM_PFX(gRelocatedRestoreStep2)
 global ASM_PFX(RestoreStep1)
 ASM_PFX(RestoreStep1):
 
+    DBG_PRINT 'RSTR1:74'
     mov     r8, [gRelocatedRestoreRegisters]
     mov     r9, [gSavedCR3]
 
+    DBG_PRINT 'RSTR1:78'
     mov     rax, [gTempPGT]
+    ; in the kernel rbx is set to mmu_cr4_features(%rip)
     mov     rbx, [gMMUCR4Features]
 
+    DBG_PRINT 'RSTR1:81'
     mov     rcx, [gRelocatedRestoreStep2]
     jmp     rcx
 
@@ -90,12 +94,18 @@ ALIGN EFI_PAGE_SIZE
 global ASM_PFX(RestoreStep2)
 ASM_PFX(RestoreStep2):
     ; Switch to temporary PGD (from rax)
+    DBG_PRINT 'RSTR2:96'
     mov     cr3, rax
+    DBG_PRINT 'RSTR2:98'
 
     ; Turn off PGE (Page Global Enabled)
+    DBG_PRINT 'RSTR2:101'
     mov     rcx, rbx
+    DBG_PRINT 'RSTR2:103'
     and     rcx, ~X86_CR4_PGE
+    DBG_PRINT 'RSTR2:105'
     mov     cr4, rcx
+    DBG_PRINT 'RSTR2:107'
 
     ; Force flush TLB
     mov     rcx, cr3

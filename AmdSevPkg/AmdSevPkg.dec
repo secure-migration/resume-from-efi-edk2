@@ -21,6 +21,9 @@
   gSevLaunchSecretGuid.PcdSevLaunchSecretSize|0x0|UINT32|1
   gSevLaunchSecretGuid.PcdSevMigrationMailboxBase|0x0|UINT32|4
   gSevLaunchSecretGuid.PcdSevMigrationMailboxSize|0x0|UINT32|5
+  gSevLaunchSecretGuid.PcdSevMigrationPagesBase|0x0|UINT32|6
+  gSevLaunchSecretGuid.PcdSevMigrationPagesSize|0x0|UINT32|7
+  
   
 
 [PcdsDynamic, PcdsDynamicEx]

@@ -47,6 +47,7 @@
 [Pcd]
   gSevLaunchSecretGuid.PcdSevIsMigrationHandler
   gSevLaunchSecretGuid.PcdSevMigrationMailboxBase
+  gSevLaunchSecretGuid.PcdSevMigrationPagesBase
 
 [Depex]
   TRUE

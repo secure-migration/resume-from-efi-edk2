@@ -10,24 +10,24 @@ void MyTarget(void) {
 
 static void SetCPUState()
 {
-  gSavedContext.ax    = 0xffffffff886f2f20;
+  gSavedContext.ax    = 0xffffffff9e1c0350;
   gSavedContext.bx    = 0x0;
-  gSavedContext.cx    = 0x1;
-  gSavedContext.dx    = 0x236e;
-  gSavedContext.si    = 0x87;
+  gSavedContext.cx    = 0x0;
+  gSavedContext.dx    = 0x0;
+  gSavedContext.si    = 0x0;
   gSavedContext.di    = 0x0;
-  gSavedContext.bp    = 0xffffffff89203e20;
-  gSavedContext.sp    = 0xffffffff89203e00;
-  gSavedContext.r8    = 0x0000000c4ff4c4e3;
-  gSavedContext.r9    = 0x0000000000000200;
+  gSavedContext.bp    = 0xffffffff9ec03e28;
+  gSavedContext.sp    = 0xffffffff9ec03e28;
+  gSavedContext.r8    = 0x0000002bd57e3220;
+  gSavedContext.r9    = 0xffff9e6b2c341a00;
   gSavedContext.r10   = 0x0;
-  gSavedContext.r11   = 0x0;
+  gSavedContext.r11   = 0x000000e518faa9fb;
   gSavedContext.r12   = 0x0;
-  gSavedContext.r13   = 0xffffffff89213840;
+  gSavedContext.r13   = 0x0;
   gSavedContext.r14   = 0x0;
-  gSavedContext.r15   = 0x0;
-  gSavedContext.flags = 0x246;
-  gSavedContext.ip    = 0xffffffff886f330e; // linux top ?
+  gSavedContext.r15   = 0x000000003be683c0;
+  gSavedContext.flags = 0x00000246;
+  gSavedContext.ip    = 0xffffffff9e1c06b2; // linux top ?
   //gSavedContext.ip    = 0x7f6b0a481d26; // grub?
   //gSavedContext.ip    = (unsigned long)(MyTarget); // 0x7f6b0a481d26;
   gSavedContext.cs    = 0x10;
@@ -35,12 +35,14 @@ static void SetCPUState()
 
   gSavedRIP = gSavedContext.ip;
   gSavedCR0 = 0x80050033;
-  gSavedCR2 = 0x000055fc38529000;
-  gSavedCR3 = 0x0000000037430000;
-  gSavedCR4 = 0x3406f0;
+  gSavedCR2 = 0x0000559f93160078;
+  gSavedCR3 = 0x000000003b2e4000;
+  gSavedCR4 = 0x003406f0;
 
   gSavedGDTDesc.address = 0xfffffe0000001000;
   gSavedGDTDesc.size = 0x0000007f;
+
+  gMMUCR4Features = AsmReadCr4();
 }
 
 // Defined in RestoreState.nasm
@@ -57,7 +59,7 @@ static void AddPageToMapping(unsigned long va, unsigned long pa){
   pmd_t new_pmd;
   /* pte_t new_pte; */
 
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER: Mapping %p to %p \n", va, pa);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER: Mapping 0x%x to 0x%x \n", va, pa);
   pgprot_t pgtable_prot = __pgprot(_KERNPG_TABLE);
   pgprot_t pmd_text_prot = __pgprot(__PAGE_KERNEL_LARGE_EXEC);
 
@@ -123,12 +125,16 @@ MigrationHandlerMain(
   
   // populate our state structs
   SetCPUState();
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After SetCPUState 222.8 gSavedRIP = %016lx\n", gSavedRIP);
+  DebugPrint(DEBUG_ERROR,"JKLJL MIGRATION HANDLER After SetCPUState gSavedCR3 = %x.\n",gSavedCR3);
  
   // do we actually need to relocate this? can't we just leave it where 
   // it is and just jump to the function in asm
   // at the moment i am not sure what the value of gRelocatedBlah is
   // do we need to point that to a Pcd??
+
+  gRelocatedRestoreStep2 = PcdGet32(PcdSevMigrationMailboxBase); 
+  gRelocatedRestoreRegisters = gRelocatedRestoreStep2 + PAGE_SIZE;
+
   memcpy((void *)gRelocatedRestoreStep2,RestoreStep2,PAGE_SIZE);
   memcpy((void *)gRelocatedRestoreRegisters,RestoreRegisters,PAGE_SIZE);
 
