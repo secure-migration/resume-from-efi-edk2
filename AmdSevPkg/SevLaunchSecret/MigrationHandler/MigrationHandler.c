@@ -27,7 +27,7 @@ static void SetCPUState()
   gSavedContext.r14   = 0x0;
   gSavedContext.r15   = 0x000000003be683c0;
   gSavedContext.flags = 0x00000246;
-  gSavedContext.ip    = 0xffffffff9e1c06b2; // linux top ?
+  gSavedContext.ip    = 0xffffffffb77c06b2; // linux top ?
   //gSavedContext.ip    = 0x7f6b0a481d26; // grub?
   //gSavedContext.ip    = (unsigned long)(MyTarget); // 0x7f6b0a481d26;
   gSavedContext.cs    = 0x10;
@@ -35,8 +35,8 @@ static void SetCPUState()
 
   gSavedRIP = gSavedContext.ip;
   gSavedCR0 = 0x80050033;
-  gSavedCR2 = 0x0000559f93160078;
-  gSavedCR3 = 0x000000003b2e4000;
+  gSavedCR2 = 0x00007f5c1ad91bf0;
+  gSavedCR3 = 0x000000003b8a2000;
   gSavedCR4 = 0x003406f0;
 
   gSavedGDTDesc.address = 0xfffffe0000001000;
@@ -108,7 +108,6 @@ static void GenerateIntermediatePageTables(){
 }
 
 
-
 // Migration Handler Main
 EFI_STATUS
 EFIAPI
@@ -124,7 +123,12 @@ MigrationHandlerMain(
   // Trampoline code can live here temporarily.
   
   // populate our state structs
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Address of SetCPUState = %p\n", SetCPUState);
   SetCPUState();
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Before PcdGet64\n");
+  UINT64 newCR3 = PcdGet64(PcdMigrationStateCR3);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After PcdGet64 newCR3 = %x\n", newCR3);
+  gSavedCR3 = newCR3;
   DebugPrint(DEBUG_ERROR,"JKLJL MIGRATION HANDLER After SetCPUState gSavedCR3 = %x.\n",gSavedCR3);
  
   // do we actually need to relocate this? can't we just leave it where 

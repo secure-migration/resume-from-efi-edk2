@@ -310,6 +310,34 @@ GetNamedFwCfgBoolean (
             }                                                       \
           } while (0)
 
+EFI_STATUS
+GetNamedFwCfgUint64 (
+  IN  CHAR8   *FwCfgFileName,
+  OUT UINT64  *Value
+  )
+{
+  EFI_STATUS           Status;
+  FIRMWARE_CONFIG_ITEM FwCfgItem;
+  UINTN                FwCfgSize;
+  UINT8                Str[30];
+
+  Status = QemuFwCfgFindFile (FwCfgFileName, &FwCfgItem, &FwCfgSize);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+  if (FwCfgSize > sizeof Str - 1) {
+    return EFI_BAD_BUFFER_SIZE;
+  }
+  QemuFwCfgSelectItem (FwCfgItem);
+  QemuFwCfgReadBytes (FwCfgSize, Str);
+
+  // Null terminate the buffer
+  Str[FwCfgSize] = 0;
+
+  *Value = AsciiStrHexToUint64((CHAR8 *)Str);
+  return EFI_SUCCESS;
+}
+
 VOID
 NoexecDxeInitialization (
   VOID
@@ -797,6 +825,17 @@ InitializePlatform (
   AmdSevInitialize ();
 
   UPDATE_BOOLEAN_PCD_FROM_FW_CFG(PcdSevIsMigrationHandler);
+
+  {
+    UINT64 Value;
+    RETURN_STATUS PcdStatus;
+    if (!EFI_ERROR (GetNamedFwCfgUint64 ("opt/ovmf/PcdMigrationStateCR3", &Value))) {
+      DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Platform.c read value from fw_cfg: Value = %lx\n", Value);
+      PcdStatus = PcdSet64S (PcdMigrationStateCR3, Value);
+      DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Platform.c wrote value to Pcd: PcdStatus = %x\n", PcdStatus);
+      ASSERT_RETURN_ERROR (PcdStatus);
+    }
+  }
 
   MiscInitialization ();
   InstallFeatureControlCallback ();

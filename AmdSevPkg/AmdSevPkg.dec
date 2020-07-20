@@ -28,3 +28,4 @@
 
 [PcdsDynamic, PcdsDynamicEx]
   gSevLaunchSecretGuid.PcdSevIsMigrationHandler|FALSE|BOOLEAN|3
+  gSevLaunchSecretGuid.PcdMigrationStateCR3|0x0|UINT64|0x88

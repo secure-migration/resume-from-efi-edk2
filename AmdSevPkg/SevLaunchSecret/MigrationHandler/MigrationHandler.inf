@@ -34,6 +34,7 @@
   UefiLib
   UefiBootServicesTableLib
   PrintLib
+  PcdLib
 
 [Guids]
   #gSevLaunchSecretGuid
@@ -48,6 +49,7 @@
   gSevLaunchSecretGuid.PcdSevIsMigrationHandler
   gSevLaunchSecretGuid.PcdSevMigrationMailboxBase
   gSevLaunchSecretGuid.PcdSevMigrationPagesBase
+  gSevLaunchSecretGuid.PcdMigrationStateCR3
 
 [Depex]
   TRUE
