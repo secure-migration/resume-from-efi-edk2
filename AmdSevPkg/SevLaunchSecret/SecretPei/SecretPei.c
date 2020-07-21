@@ -26,5 +26,11 @@ InitializeSecretPei (
     PcdGet32 (PcdSevMigrationPagesSize),
     EfiRuntimeServicesData);
 
+  BuildMemoryAllocationHob (
+    PcdGet32 (PcdSevMigrationStatePageBase),
+    PcdGet32 (PcdSevMigrationStatePageSize),
+    EfiRuntimeServicesData);
+
+
   return EFI_SUCCESS;
 }

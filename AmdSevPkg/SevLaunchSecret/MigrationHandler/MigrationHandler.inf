@@ -44,6 +44,9 @@
   # replace these with mailbox addr and size
   gSevLaunchSecretGuid.PcdSevLaunchSecretBase
   gSevLaunchSecretGuid.PcdSevLaunchSecretSize
+  gSevLaunchSecretGuid.PcdSevMigrationStatePageBase
+  gSevLaunchSecretGuid.PcdSevMigrationStatePageSize
+ 
 
 [Pcd]
   gSevLaunchSecretGuid.PcdSevIsMigrationHandler

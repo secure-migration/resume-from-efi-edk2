@@ -119,7 +119,12 @@ MigrationHandlerMain(
   // Setup the mailbox
   UINT64 params_base = PcdGet32(PcdSevMigrationMailboxBase); 
   volatile struct sev_mh_params *params = (void *) params_base;   
-  
+
+  UINT64 state_page_base = PcdGet32(PcdSevMigrationStatePageBase); 
+  volatile struct pt_regs *SourceState = (void *) state_page_base;   
+  // avoiding unused error
+  SourceState->ax = 3;
+
   // Trampoline code can live here temporarily.
   
   // populate our state structs

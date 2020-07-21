@@ -85,6 +85,10 @@ gSevLaunchSecretGuid.PcdSevMigrationPagesBase|gSevLaunchSecretGuid.PcdSevMigrati
 0x00E000|0x001000
 gSevLaunchSecretGuid.PcdSevMigrationMailboxBase|gSevLaunchSecretGuid.PcdSevMigrationMailboxSize
 
+0x00F000|0x001000
+gSevLaunchSecretGuid.PcdSevMigrationStatePageBase|gSevLaunchSecretGuid.PcdSevMigrationStatePageSize
+
+
 0x010000|0x010000
 gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecPeiTempRamBase|gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecPeiTempRamSize
 

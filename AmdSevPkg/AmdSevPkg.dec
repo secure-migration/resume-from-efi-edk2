@@ -23,6 +23,8 @@
   gSevLaunchSecretGuid.PcdSevMigrationMailboxSize|0x0|UINT32|5
   gSevLaunchSecretGuid.PcdSevMigrationPagesBase|0x0|UINT32|6
   gSevLaunchSecretGuid.PcdSevMigrationPagesSize|0x0|UINT32|7
+  gSevLaunchSecretGuid.PcdSevMigrationStatePageBase|0x0|UINT32|9
+  gSevLaunchSecretGuid.PcdSevMigrationStatePageSize|0x0|UINT32|10
   
   
 

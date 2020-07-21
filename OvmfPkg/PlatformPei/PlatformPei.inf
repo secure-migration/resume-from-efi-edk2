@@ -109,6 +109,8 @@
 
 [FixedPcd]
   gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseAddress
+  gSevLaunchSecretGuid.PcdSevMigrationStatePageBase
+  gSevLaunchSecretGuid.PcdSevMigrationStatePageSize
 
 [FeaturePcd]
   gUefiOvmfPkgTokenSpaceGuid.PcdCsmEnable
