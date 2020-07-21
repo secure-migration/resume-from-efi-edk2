@@ -834,6 +834,9 @@ InitializePlatform (
       PcdStatus = PcdSet64S (PcdMigrationStateCR3, Value);
       DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Platform.c wrote value to Pcd: PcdStatus = %x\n", PcdStatus);
       ASSERT_RETURN_ERROR (PcdStatus);
+      UINT64 state_page_base = PcdGet32(PcdSevMigrationStatePageBase);
+      volatile struct cpu_state *SourceState = (void *) state_page_base;
+      SourceState->cr3 = Value;
     }
   }
 

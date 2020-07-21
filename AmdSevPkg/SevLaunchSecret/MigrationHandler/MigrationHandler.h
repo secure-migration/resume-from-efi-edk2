@@ -75,6 +75,20 @@ UINT64 gTempPGT;
 UINT64 gMMUCR4Features;
 UINT64 gRelocatedRestoreStep2;
 
+#pragma pack(1)
+struct cpu_state {
+  char magic[8];
+  UINT64 version;
+  struct pt_regs regs;
+  UINT64 rip;
+  UINT64 cr0;
+  UINT64 cr2;
+  UINT64 cr3;
+  UINT64 cr4;
+  struct desc_ptr gdt_desc;
+  char end_magic[8];
+};
+#pragma pack()
 /*
  * CREATING INTERMEDIATE PAGE TABLES
  *

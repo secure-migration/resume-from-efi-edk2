@@ -121,9 +121,8 @@ MigrationHandlerMain(
   volatile struct sev_mh_params *params = (void *) params_base;   
 
   UINT64 state_page_base = PcdGet32(PcdSevMigrationStatePageBase); 
-  volatile struct pt_regs *SourceState = (void *) state_page_base;   
+  volatile struct cpu_state *SourceState = (void *) state_page_base;   
   // avoiding unused error
-  SourceState->ax = 3;
 
   // Trampoline code can live here temporarily.
   
@@ -131,9 +130,9 @@ MigrationHandlerMain(
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Address of SetCPUState = %p\n", SetCPUState);
   SetCPUState();
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Before PcdGet64\n");
-  UINT64 newCR3 = PcdGet64(PcdMigrationStateCR3);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After PcdGet64 newCR3 = %x\n", newCR3);
-  gSavedCR3 = newCR3;
+  //UINT64 newCR3 = PcdGet64(PcdMigrationStateCR3);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After PcdGet64 newCR3 = %x\n", SourceState->cr3);
+  gSavedCR3 = SourceState->cr3;
   DebugPrint(DEBUG_ERROR,"JKLJL MIGRATION HANDLER After SetCPUState gSavedCR3 = %x.\n",gSavedCR3);
  
   // do we actually need to relocate this? can't we just leave it where 
