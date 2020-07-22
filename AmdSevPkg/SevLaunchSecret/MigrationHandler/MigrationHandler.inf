@@ -46,12 +46,13 @@
   gSevLaunchSecretGuid.PcdSevLaunchSecretSize
   gSevLaunchSecretGuid.PcdSevMigrationStatePageBase
   gSevLaunchSecretGuid.PcdSevMigrationStatePageSize
- 
+  gSevLaunchSecretGuid.PcdSevMigrationPagesBase
+  gSevLaunchSecretGuid.PcdSevMigrationPagesSize
 
 [Pcd]
   gSevLaunchSecretGuid.PcdSevIsMigrationHandler
   gSevLaunchSecretGuid.PcdSevMigrationMailboxBase
-  gSevLaunchSecretGuid.PcdSevMigrationPagesBase
+  #gSevLaunchSecretGuid.PcdSevMigrationPagesBase
   gSevLaunchSecretGuid.PcdMigrationStateCR3
 
 [Depex]
