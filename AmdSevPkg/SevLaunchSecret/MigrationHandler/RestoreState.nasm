@@ -127,7 +127,9 @@ ASM_PFX(RestoreStep2):
     ; Force flush TLB
     mov     rcx, cr3
     mov     cr3, rcx
-    mov     rbx, cr4
+    
+    ; i think this may have been a mistake?
+    ; mov     rbx, cr4
 
     ; Turn PGE back on
     mov     cr4, rbx

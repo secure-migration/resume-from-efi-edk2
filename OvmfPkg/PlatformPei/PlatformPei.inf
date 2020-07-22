@@ -105,7 +105,6 @@
   gUefiCpuPkgTokenSpaceGuid.PcdCpuBootLogicalProcessorNumber
   gUefiCpuPkgTokenSpaceGuid.PcdCpuApStackSize
   gSevLaunchSecretGuid.PcdSevIsMigrationHandler
-  gSevLaunchSecretGuid.PcdMigrationStateCR3
 
 [FixedPcd]
   gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseAddress

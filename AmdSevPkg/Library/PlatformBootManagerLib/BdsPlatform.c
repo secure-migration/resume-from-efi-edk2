@@ -1451,10 +1451,6 @@ PlatformBootManagerAfterConsole (
   // and will end up being run. 
   //
 
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER BdsPlatform.c before PcdGet64\n");
-  UINT64 newCR3 = PcdGet64(PcdMigrationStateCR3);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER BdsPlatform.c After PcdGet64 newCR3 = %x\n", newCR3);
-
   if(PcdGetBool(PcdSevIsMigrationHandler)){
     PlatformRegisterFvBootOption (
       &gMigrationHandlerFileGuid, L"Migration Handler", LOAD_OPTION_ACTIVE

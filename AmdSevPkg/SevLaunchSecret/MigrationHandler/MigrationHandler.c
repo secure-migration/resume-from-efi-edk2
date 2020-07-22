@@ -4,46 +4,6 @@
  */
 #include "MigrationHandler.h"
 
-void MyTarget(void) {
-  DEBUG((DEBUG_ERROR,"MIGRATION HANDLER - inside MyTarget 111\n"));
-}
-
-static void SetCPUState()
-{
-  gSavedContext.ax    = 0xffffffff9e1c0350;
-  gSavedContext.bx    = 0x0;
-  gSavedContext.cx    = 0x0;
-  gSavedContext.dx    = 0x0;
-  gSavedContext.si    = 0x0;
-  gSavedContext.di    = 0x0;
-  gSavedContext.bp    = 0xffffffff9ec03e28;
-  gSavedContext.sp    = 0xffffffff9ec03e28;
-  gSavedContext.r8    = 0x0000002bd57e3220;
-  gSavedContext.r9    = 0xffff9e6b2c341a00;
-  gSavedContext.r10   = 0x0;
-  gSavedContext.r11   = 0x000000e518faa9fb;
-  gSavedContext.r12   = 0x0;
-  gSavedContext.r13   = 0x0;
-  gSavedContext.r14   = 0x0;
-  gSavedContext.r15   = 0x000000003be683c0;
-  gSavedContext.flags = 0x00000246;
-  gSavedContext.ip    = 0xffffffffb77c06b2; // linux top ?
-  //gSavedContext.ip    = 0x7f6b0a481d26; // grub?
-  //gSavedContext.ip    = (unsigned long)(MyTarget); // 0x7f6b0a481d26;
-  gSavedContext.cs    = 0x10;
-  gSavedContext.ss    = 0x18;
-
-  gSavedRIP = gSavedContext.ip;
-  gSavedCR0 = 0x80050033;
-  gSavedCR2 = 0x00007f5c1ad91bf0;
-  gSavedCR3 = 0x000000003b8a2000;
-  gSavedCR4 = 0x003406f0;
-
-  gSavedGDTDesc.address = 0xfffffe0000001000;
-  gSavedGDTDesc.size = 0x0000007f;
-
-  gMMUCR4Features = AsmReadCr4();
-}
 
 // Defined in RestoreState.nasm
 void RestoreRegisters(void);
@@ -122,38 +82,36 @@ MigrationHandlerMain(
   volatile struct sev_mh_params *params = (void *) params_base;   
 
   UINT64 state_page_base = PcdGet32(PcdSevMigrationStatePageBase); 
-  /*volatile*/ struct cpu_state *SourceState = (void *) state_page_base;   
-  // avoiding unused error
+  struct cpu_state *SourceState = (void *) state_page_base;   
 
   // Trampoline code can live here temporarily.
   
   // populate our state structs
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Address of RestoreRegisters = %p\n", RestoreRegisters);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Address of RestoreRegistersData = %p\n", &RestoreRegistersData);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Address of SetCPUState = %p\n", SetCPUState);
-  SetCPUState();
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Before PcdGet64\n");
-  //UINT64 newCR3 = PcdGet64(PcdMigrationStateCR3);
+
   char *magicstr = SourceState->magic;
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER SourceState->magic = %a\n", magicstr);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER SourceState->magic = %c %c %c %c\n", SourceState->magic[0], SourceState->magic[1], SourceState->magic[2], SourceState->magic[3]);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After PcdGet64 newCR3 = %x\n", SourceState->cr3);
   gSavedCR3 = SourceState->cr3;
+
+  // I am slightly hazy about how w should be handling cr4
+  gMMUCR4Features = AsmReadCr4();
+  // which one? 
   gMMUCR4Features = SourceState->cr4;
-  DebugPrint(DEBUG_ERROR,"JKLJL MIGRATION HANDLER After SetCPUState gSavedCR3 = %x.\n",gSavedCR3);
 
-  // do we actually need to relocate this? can't we just leave it where 
-  // it is and just jump to the function in asm
-  // at the moment i am not sure what the value of gRelocatedBlah is
-  // do we need to point that to a Pcd??
-
+  // relocate pages
   gRelocatedRestoreStep2 = PcdGet32(PcdSevMigrationPagesBase);
   gRelocatedRestoreRegisters = gRelocatedRestoreStep2 + PAGE_SIZE;
   gRelocatedRestoreRegistersData = gRelocatedRestoreRegisters + PAGE_SIZE;
 
   CopyMem((void *)gRelocatedRestoreStep2,RestoreStep2,PAGE_SIZE);
   CopyMem((void *)gRelocatedRestoreRegisters,RestoreRegisters,PAGE_SIZE);
+  // i don't think we actaully need to copy this. SourceState is already 
+  // on its own page. we should be able to just add that page to the 
+  // intermediate pagetable and set gRelocatedRestoreRegistersData 
+  // accordingly. just going to leave for now
   CopyMem((void *)gRelocatedRestoreRegistersData,SourceState,sizeof(*SourceState));
+
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreStep2 = %lx\n", gRelocatedRestoreStep2);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreRegisters = %lx\n", gRelocatedRestoreRegisters);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreRegistersData = %lx\n", gRelocatedRestoreRegistersData);

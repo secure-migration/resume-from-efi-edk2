@@ -72,7 +72,6 @@
 [Pcd.IA32, Pcd.X64]
   gEfiMdePkgTokenSpaceGuid.PcdFSBClock
   gSevLaunchSecretGuid.PcdSevIsMigrationHandler
-  gSevLaunchSecretGuid.PcdMigrationStateCR3
 
 [Protocols]
   gEfiDecompressProtocolGuid
