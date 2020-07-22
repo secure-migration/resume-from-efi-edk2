@@ -338,6 +338,31 @@ GetNamedFwCfgUint64 (
   return EFI_SUCCESS;
 }
 
+EFI_STATUS
+GetNamedFwCfgBuffer (
+  IN  CHAR8   *FwCfgFileName,
+  IN  UINT32  Size,
+  OUT UINT8   *Buffer,
+  OUT UINT32  *ActualSize
+  )
+{
+  EFI_STATUS           Status;
+  FIRMWARE_CONFIG_ITEM FwCfgItem;
+  UINTN                FwCfgSize;
+
+  Status = QemuFwCfgFindFile (FwCfgFileName, &FwCfgItem, &FwCfgSize);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+  if (FwCfgSize > Size) {
+    return EFI_BAD_BUFFER_SIZE;
+  }
+  QemuFwCfgSelectItem (FwCfgItem);
+  QemuFwCfgReadBytes (FwCfgSize, Buffer);
+  *ActualSize = FwCfgSize;
+  return EFI_SUCCESS;
+}
+
 VOID
 NoexecDxeInitialization (
   VOID
@@ -834,9 +859,21 @@ InitializePlatform (
       PcdStatus = PcdSet64S (PcdMigrationStateCR3, Value);
       DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Platform.c wrote value to Pcd: PcdStatus = %x\n", PcdStatus);
       ASSERT_RETURN_ERROR (PcdStatus);
-      UINT64 state_page_base = PcdGet32(PcdSevMigrationStatePageBase);
-      volatile struct cpu_state *SourceState = (void *) state_page_base;
-      SourceState->cr3 = Value;
+      //UINT64 state_page_base = PcdGet32(PcdSevMigrationStatePageBase);
+      //volatile struct cpu_state *SourceState = (void *) state_page_base;
+      //SourceState->cr3 = Value;
+    }
+  }
+
+  {
+    UINT64 state_page_base = PcdGet32(PcdSevMigrationStatePageBase);
+    UINT32 state_page_size = PcdGet32(PcdSevMigrationStatePageSize);
+    UINT32 actual_size = 0;
+    if (!EFI_ERROR (GetNamedFwCfgBuffer ("opt/ovmf/PcdMigrationStatePage", state_page_size, (UINT8*)state_page_base, &actual_size))) {
+      DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Platform.c read buffer from fw_cfg: actual_size = %d\n", actual_size);
+      char* magic = (char*)((void*)state_page_base);
+      DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Platform.c read buffer from fw_cfg: magic = %a\n", magic);
+      DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Platform.c read buffer from fw_cfg: magic = %c %c %c %c\n", magic[0], magic[1], magic[2], magic[3]);
     }
   }
 
