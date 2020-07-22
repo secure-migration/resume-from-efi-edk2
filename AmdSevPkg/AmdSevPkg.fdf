@@ -79,7 +79,7 @@ gEfiMdePkgTokenSpaceGuid.PcdGuidedExtractHandlerTableAddress|gUefiOvmfPkgTokenSp
 0x009000|0x001000
 gSevLaunchSecretGuid.PcdSevLaunchSecretBase|gSevLaunchSecretGuid.PcdSevLaunchSecretSize
 
-0x00B000|0x002000
+0x00B000|0x003000
 gSevLaunchSecretGuid.PcdSevMigrationPagesBase|gSevLaunchSecretGuid.PcdSevMigrationPagesSize
 
 0x00E000|0x001000
