@@ -71,6 +71,7 @@ struct desc_ptr gSavedGDTDesc;
 struct pt_regs gSavedContext;
 
 UINT64 gRelocatedRestoreRegisters;
+UINT64 gRelocatedRestoreRegistersData;
 UINT64 gTempPGT;
 UINT64 gMMUCR4Features;
 UINT64 gRelocatedRestoreStep2;
@@ -132,6 +133,8 @@ typedef struct { pmdval_t pmd; } pte_t;
 // Each level of our page table tree has 512 entries of 64-bit each 
 // (which together fit in one 4096-byte page)
 #define ENTRIES (EFI_PAGE_SIZE / sizeof(UINT64))
+
+extern struct cpu_state RestoreRegistersData;
 
 // the four levels of our page table (in order)
 extern UINT64 pgd[ENTRIES];

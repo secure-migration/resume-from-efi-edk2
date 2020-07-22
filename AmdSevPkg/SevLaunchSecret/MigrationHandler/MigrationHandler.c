@@ -75,7 +75,7 @@ static void AddPageToMapping(unsigned long va, unsigned long pa){
   // with the virtual address 
   // the source is the entry specifying the physical addres 
   new_pmd = __pmd((pa & PMD_MASK) | pgprot_val(pmd_text_prot));
-  memcpy(pmd + pmd_index(va),&new_pmd,sizeof(pmd_t));
+  CopyMem(pmd + pmd_index(va),&new_pmd,sizeof(pmd_t));
 
   // basically the same 
   // in the kernel, this line uses the __pa macro to find the 
@@ -84,10 +84,10 @@ static void AddPageToMapping(unsigned long va, unsigned long pa){
   // i think we can just use the address of the pmd directly. 
   // have to do some suspicious casting of pmd. 
   new_pud = __pud((UINT64)pmd | pgprot_val(pgtable_prot));
-  memcpy(pud + pud_index(va),&new_pud,sizeof(pud_t));
+  CopyMem(pud + pud_index(va),&new_pud,sizeof(pud_t));
 
   new_pgd = __pgd((UINT64)pud | pgprot_val(pgtable_prot));
-  memcpy(pgd + pgd_index(va), &new_pgd, sizeof(pgd_t));
+  CopyMem(pgd + pgd_index(va), &new_pgd, sizeof(pgd_t));
 
   // i think we need something with the pte as well
 }
@@ -103,6 +103,7 @@ static void GenerateIntermediatePageTables(){
   // since OVMF has a direct mapping, VA = PA
   AddPageToMapping(gRelocatedRestoreStep2,gRelocatedRestoreStep2);
   AddPageToMapping(gRelocatedRestoreRegisters,gRelocatedRestoreRegisters);
+  AddPageToMapping(gRelocatedRestoreRegistersData,gRelocatedRestoreRegistersData);
 
   gTempPGT = (UINT64)pgd;
 }
@@ -121,30 +122,42 @@ MigrationHandlerMain(
   volatile struct sev_mh_params *params = (void *) params_base;   
 
   UINT64 state_page_base = PcdGet32(PcdSevMigrationStatePageBase); 
-  volatile struct cpu_state *SourceState = (void *) state_page_base;   
+  /*volatile*/ struct cpu_state *SourceState = (void *) state_page_base;   
   // avoiding unused error
 
   // Trampoline code can live here temporarily.
   
   // populate our state structs
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Address of RestoreRegisters = %p\n", RestoreRegisters);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Address of RestoreRegistersData = %p\n", &RestoreRegistersData);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Address of SetCPUState = %p\n", SetCPUState);
   SetCPUState();
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Before PcdGet64\n");
   //UINT64 newCR3 = PcdGet64(PcdMigrationStateCR3);
+  char *magicstr = SourceState->magic;
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER SourceState->magic = %a\n", magicstr);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER SourceState->magic = %c %c %c %c\n", SourceState->magic[0], SourceState->magic[1], SourceState->magic[2], SourceState->magic[3]);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After PcdGet64 newCR3 = %x\n", SourceState->cr3);
   gSavedCR3 = SourceState->cr3;
+  gMMUCR4Features = SourceState->cr4;
   DebugPrint(DEBUG_ERROR,"JKLJL MIGRATION HANDLER After SetCPUState gSavedCR3 = %x.\n",gSavedCR3);
- 
+
   // do we actually need to relocate this? can't we just leave it where 
   // it is and just jump to the function in asm
   // at the moment i am not sure what the value of gRelocatedBlah is
   // do we need to point that to a Pcd??
 
-  gRelocatedRestoreStep2 = PcdGet32(PcdSevMigrationMailboxBase); 
+  gRelocatedRestoreStep2 = PcdGet32(PcdSevMigrationPagesBase);
   gRelocatedRestoreRegisters = gRelocatedRestoreStep2 + PAGE_SIZE;
+  gRelocatedRestoreRegistersData = gRelocatedRestoreRegisters + PAGE_SIZE;
 
-  memcpy((void *)gRelocatedRestoreStep2,RestoreStep2,PAGE_SIZE);
-  memcpy((void *)gRelocatedRestoreRegisters,RestoreRegisters,PAGE_SIZE);
+  CopyMem((void *)gRelocatedRestoreStep2,RestoreStep2,PAGE_SIZE);
+  CopyMem((void *)gRelocatedRestoreRegisters,RestoreRegisters,PAGE_SIZE);
+  CopyMem((void *)gRelocatedRestoreRegistersData,SourceState,sizeof(*SourceState));
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreStep2 = %lx\n", gRelocatedRestoreStep2);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreRegisters = %lx\n", gRelocatedRestoreRegisters);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreRegistersData = %lx\n", gRelocatedRestoreRegistersData);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: content of gRelocatedRestoreRegistersData = %a\n", (char*)((void*)gRelocatedRestoreRegistersData));
 
   GenerateIntermediatePageTables();
 

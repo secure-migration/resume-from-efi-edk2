@@ -13,6 +13,7 @@ extern ASM_PFX(gSavedRIP)
 extern ASM_PFX(gSavedGDTDesc)
 extern ASM_PFX(gSavedContext)
 extern ASM_PFX(gRelocatedRestoreRegisters)
+extern ASM_PFX(gRelocatedRestoreRegistersData)
 extern ASM_PFX(gTempPGT)
 extern ASM_PFX(gMMUCR4Features)
 extern ASM_PFX(gRelocatedRestoreStep2)
@@ -46,6 +47,21 @@ extern ASM_PFX(gRelocatedRestoreStep2)
     out     dx, al
 %endmacro
 
+%macro DBG_PUT_REG 1
+%ifdef ENABLE_DEBUG
+    mov     dx, 0x402
+    DBG_PUT_CHAR '|'
+    mov     rax, %1
+    %rep 8
+        out     dx, al
+        shr     rax, 8
+    %endrep
+    DBG_PUT_CHAR '|'
+    DBG_PUT_CHAR 0x0d
+    DBG_PUT_CHAR 0x0a
+%endif
+%endmacro
+
 %macro DBG_PUT_CHARS 1
     %strlen len %1
     %assign i 0
@@ -72,16 +88,17 @@ global ASM_PFX(RestoreStep1)
 ASM_PFX(RestoreStep1):
 
     DBG_PRINT 'RSTR1:74'
-    mov     r8, [gRelocatedRestoreRegisters]
-    mov     r9, [gSavedCR3]
+    mov     r8, qword [gRelocatedRestoreRegisters]
+    mov     r9, qword [gSavedCR3]
+    mov     r10, qword [gRelocatedRestoreRegistersData]
 
     DBG_PRINT 'RSTR1:78'
-    mov     rax, [gTempPGT]
+    mov     rax, qword [gTempPGT]
     ; in the kernel rbx is set to mmu_cr4_features(%rip)
-    mov     rbx, [gMMUCR4Features]
+    mov     rbx, qword [gMMUCR4Features]
 
     DBG_PRINT 'RSTR1:81'
-    mov     rcx, [gRelocatedRestoreStep2]
+    mov     rcx, qword [gRelocatedRestoreStep2]
     jmp     rcx
 
 ; Inputs:
@@ -121,25 +138,34 @@ ASM_PFX(RestoreStep2):
     jmp	r8
 
 ; Inputs:
-;   r9 - The target PGD
+;   r10 - Address of relocated CPU state structure
 ALIGN EFI_PAGE_SIZE
 global ASM_PFX(RestoreRegisters)
 ASM_PFX(RestoreRegisters):
 
+    DBG_PRINT 'DBG:r10='
+    DBG_PUT_REG r10
+    DBG_PRINT 'DBG:90'
+    mov     r9, qword [r10 + 0x0]
+    DBG_PRINT 'DBG:gggr9='
+    DBG_PUT_REG r9
+
     DBG_PRINT 'DBG:100'
-    mov     r9, [gSavedCR3]
+    mov     r9, qword [r10 + 0xd0]
+    DBG_PRINT 'DBG:r9='
+    DBG_PUT_REG r9
     DBG_PRINT 'DBG:101'
     mov     cr3, r9
 
     DBG_PRINT 'DBG:110'
-    mov     r9, [gSavedCR0]
+    mov     r9, qword [r10 + 0xc0]
     mov     cr0, r9
     DBG_PRINT 'DBG:120'
-    mov     r9, [gSavedCR2]
+    mov     r9, qword [r10 + 0xc8]
     mov     cr2, r9
 
     DBG_PRINT 'DBG:130'
-    mov     rax, [gSavedCR4]
+    mov     rdx, qword [r10 + 0xd8]
     mov     rdx, rax
     and     rdx, ~X86_CR4_PGE
     mov     cr4, rdx    ; turn off PGE
@@ -150,12 +176,8 @@ ASM_PFX(RestoreRegisters):
     mov     cr4, rax    ; turn PGE back on
     DBG_PRINT 'DBG:160'
 
-    ;mov     rax, [gSavedCR3] ; dummy reference
-    ;mov     rax, [MyTarget]  ; dummy reference
-
-
     DBG_PRINT 'DBG:170'
-    mov     rax, gSavedContext
+    lea     rax, [r10 + 0x08]
 
     DBG_PRINT 'DBG:180'
     ; Restore all registers except rax
@@ -213,6 +235,11 @@ ASM_PFX(RestoreRegisters):
 
 
   SECTION .data
+
+global ASM_PFX(RestoreRegistersData)
+ALIGN EFI_PAGE_SIZE
+ASM_PFX(RestoreRegistersData):
+    TIMES EFI_PAGE_SIZE DB 0
 
 global ASM_PFX(pgd)
 global ASM_PFX(pud)
