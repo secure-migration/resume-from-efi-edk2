@@ -2,6 +2,7 @@
  *  Migration Handler
  *
  */
+#include "State.h"
 #include "MigrationHandler.h"
 
 
@@ -97,7 +98,9 @@ MigrationHandlerMain(
   // I am slightly hazy about how w should be handling cr4
   gMMUCR4Features = AsmReadCr4();
   // which one? 
-  gMMUCR4Features = SourceState->cr4;
+  //gMMUCR4Features = SourceState->cr4;
+  // dubek: the second one doesn't work for me.
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER SourceState->cr4 = 0x%lx gMMUCR4Features = 0x%lx\n", SourceState->cr4, gMMUCR4Features);
 
   // relocate pages
   gRelocatedRestoreStep2 = PcdGet32(PcdSevMigrationPagesBase);
@@ -111,6 +114,9 @@ MigrationHandlerMain(
   // intermediate pagetable and set gRelocatedRestoreRegistersData 
   // accordingly. just going to leave for now
   CopyMem((void *)gRelocatedRestoreRegistersData,SourceState,sizeof(*SourceState));
+  // Also try to copy the state data into the last 1KB of the page, in case we
+  // find out we can only use one page during RestoreRegisters. (0xC00 = 3KB)
+  CopyMem((void *)(gRelocatedRestoreRegisters + 0xc00),SourceState,sizeof(*SourceState));
 
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreStep2 = %lx\n", gRelocatedRestoreStep2);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreRegisters = %lx\n", gRelocatedRestoreRegisters);
