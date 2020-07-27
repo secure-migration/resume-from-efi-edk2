@@ -159,26 +159,31 @@ _here_rr:
     DBG_PUT_REG r9
 
     ;; Turn off PGE (Page Global Enabled)
-    ;DBG_PRINT 'DBG:PGEOFF'
-    ;mov     rcx, rbx
-    ;and     rcx, ~X86_CR4_PGE
-    ;DBG_PRINT 'DBG:SETCR4_A'
-    ;mov     cr4, rcx
+    DBG_PRINT 'DBG:PGEOFF'
+    mov     rcx, rbx
+    and     rcx, ~X86_CR4_PGE
+    DBG_PRINT 'DBG:SETCR4_A'
+    mov     cr4, rcx
 
     ; Force flush TLB
-    ;DBG_PRINT 'DBG:FLUSHTLB'
-    ;mov     rcx, cr3
-    ;mov     cr3, rcx
+    DBG_PRINT 'DBG:FLUSHTLB'
+    mov     rcx, cr3
+    mov     cr3, rcx
 
     ;; Turn PGE back on
-    ;DBG_PRINT 'DBG:SETCR4_B'
-    ;mov     cr4, rbx
+    DBG_PRINT 'DBG:SETCR4_B'
+    mov     cr4, rbx
 
     DBG_PRINT 'DBG:data r10_A='
     DBG_PUT_REG r10
-    lea      r10, [rel RestoreRegisters + 0xC00]
-    DBG_PRINT 'DBG:data r10_B='
-    DBG_PUT_REG r10
+
+    ; Currently the cpu_state is store in the next page in
+    ; [rel RestoreRegisters + 0x1000]. If (in the future) we find out that
+    ; we need to fit everything in one page, we can put the cpu_state in the
+    ; last 1KB of this page as follows:
+    ;lea      r10, [rel RestoreRegisters + 0xC00]
+    ;DBG_PRINT 'DBG:data r10_B='
+    ;DBG_PUT_REG r10
 
     DBG_PRINT 'DBG:90'
     mov     r9, qword [r10 + STATE_MAGIC]
@@ -204,62 +209,48 @@ _here_rr:
     mov     r9, qword [r10 + STATE_CR2]
     mov     cr2, r9
 
-    DBG_PRINT 'DBG:130'
-    ;mov     rax, qword [r10 + STATE_CR4]
-    ;mov     rdx, rax
+    ;DBG_PRINT 'DBG:130'
+    ;mov     r15, qword [r10 + STATE_CR4]
+    ;mov     rdx, r15
     ;and     rdx, ~X86_CR4_PGE
     ;mov     cr4, rdx    ; turn off PGE
     ;DBG_PRINT 'DBG:140'
     ;mov     rcx, cr3    ; flush TLB
     ;mov     cr3, rcx    ; flush TLB
     ;DBG_PRINT 'DBG:150'
-    ;mov     cr4, rax    ; turn PGE back on
+    ;mov     cr4, r15    ; turn PGE back on
     DBG_PRINT 'DBG:160'
 
-    ; Restore segments
-    DBG_PRINT 'DBG:SEG_CS'
-    mov     ax, [r10 + STATE_REGS_CS]
-    mov     cs, ax
-    DBG_PRINT 'DBG:SEG_SS'
-    mov     ax, [r10 + STATE_REGS_SS]
-    mov     ss, ax
-    DBG_PRINT 'DBG:SEG_DS'
-    mov     ax, [r10 + STATE_DS]
-    mov     ds, ax
-    DBG_PRINT 'DBG:SEG_ES'
-    mov     ax, [r10 + STATE_ES]
-    mov     es, ax
-    DBG_PRINT 'DBG:SEG_FS'
-    mov     ax, [r10 + STATE_FS]
-    mov     fs, ax
-    DBG_PRINT 'DBG:SEG_GS'
-    mov     ax, [r10 + STATE_GS]
-    mov     gs, ax
+    mov     r14, [r10 + STATE_REGS_IP]
+    DBG_PRINT 'DBG:t.rip='
+    DBG_PUT_REG r14
+    mov     r15, [r14]
+    DBG_PUT_REG r15
 
     DBG_PRINT 'DBG:170'
     mov     rax, r10
 
-    DBG_PRINT 'DBG:180'
+    ;DBG_PRINT 'DBG:180'
     ; Restore all registers except rax
     mov     rsp, [rax + STATE_REGS_SP]
     mov     rbp, [rax + STATE_REGS_BP]
     mov     rsi, [rax + STATE_REGS_SI]
     mov     rdi, [rax + STATE_REGS_DI]
-    DBG_PRINT 'DBG:190'
+    ;DBG_PRINT 'DBG:190'
     mov     rbx, [rax + STATE_REGS_BX]
     mov     rcx, [rax + STATE_REGS_CX]
     mov     rdx, [rax + STATE_REGS_DX]
     mov     r8,  [rax + STATE_REGS_R8]
-    DBG_PRINT 'DBG:200'
+    ;DBG_PRINT 'DBG:200'
     mov     r9,  [rax + STATE_REGS_R9]
     mov     r10, [rax + STATE_REGS_R10]
     mov     r11, [rax + STATE_REGS_R11]
     mov     r12, [rax + STATE_REGS_R12]
-    DBG_PRINT 'DBG:210'
+    ;DBG_PRINT 'DBG:210'
     mov     r13, [rax + STATE_REGS_R13]
     mov     r14, [rax + STATE_REGS_R14]
     mov     r15, [rax + STATE_REGS_R15]
-    DBG_PRINT 'DBG:220'
+    ;DBG_PRINT 'DBG:220'
 
     ; Restore flags
     push    qword [rax + STATE_REGS_FLAGS]
@@ -267,19 +258,45 @@ _here_rr:
 
     ; TODO restore EFER
 
-    DBG_PRINT 'DBG:280'
     ; Restore GDT
+    ;lea     rax, [rel RestoreRegisters + 0x1000]
     lgdt    [rax + STATE_GDT_DESC]
-    DBG_PRINT 'DBG:290'
+    ;DBG_PRINT 'DBG:290'
     ; Restore IDT
     lidt    [rax + STATE_IDT]
 
+    ;mov     r10, rax ; TODO this clobbers r10
+    DBG_PRINT 'DBG:280'
+    ;lea     rax, [rel RestoreRegisters + 0x1000]
+    ; Restore segments
+    ;DBG_PRINT 'DBG:SEG_CS'
+    ;mov     ax, [r10 + STATE_REGS_CS]
+    ;mov     cs, ax
+    ;DBG_PRINT 'DBG:SEG_SS'
+    ;mov     ax, [r10 + STATE_REGS_SS]
+    ;mov     ss, ax
+    ;DBG_PRINT 'DBG:SEG_DS'
+    mov     ax, [rel RestoreRegisters + 0x1000 + STATE_DS]
+    mov     ds, ax
+    ;DBG_PRINT 'DBG:SEG_ES'
+    mov     ax, [rel RestoreRegisters + 0x1000 + STATE_ES]
+    mov     es, ax
+    ;DBG_PRINT 'DBG:SEG_FS'
+    mov     ax, [rel RestoreRegisters + 0x1000 + STATE_FS]
+    mov     fs, ax
+    ;DBG_PRINT 'DBG:SEG_GS'
+    mov     ax, [rel RestoreRegisters + 0x1000 + STATE_GS]
+    mov     gs, ax
+
     DBG_PRINT 'DBG:400'
-    mov     rax, [rax + STATE_REGS_IP]
-    DBG_PRINT 'DBG:410'
-    jmp     rax
-    DBG_PRINT 'DBG:420'
-    ret
+    mov     rax, [rel RestoreRegisters + 0x1000 + STATE_REGS_ORIG_AX]
+    lea     rsp, [rel RestoreRegisters + 0x1000 + STATE_REGS_IP]
+    iretq
+    ;mov     rax, [rax + STATE_REGS_IP]
+    ;DBG_PRINT 'DBG:410'
+    ;jmp     rax
+    ;DBG_PRINT 'DBG:420'
+    ;ret
 
 
 
