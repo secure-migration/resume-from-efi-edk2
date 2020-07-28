@@ -47,7 +47,10 @@ UINT64 gRelocatedRestoreStep2;
 #define __AC(X,Y)   (X##Y)
 #define _AC(X,Y)    __AC(X,Y)
 
-#define PAGE_OFFSET 0xffff888000000000
+#define CR3_ADDR_MASK 0x7FFFFFFFFFFFF000ull
+#define cr3_to_pgt_pa(cr3) ((unsigned long)(cr3) & CR3_ADDR_MASK)
+
+#define PAGE_OFFSET 0xffff888000000000ull
 #define KERNEL_OFFSET 0x1000000
 
 // we made this macro. use at your own risk. 
