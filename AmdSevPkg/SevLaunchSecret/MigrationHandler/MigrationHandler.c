@@ -207,12 +207,8 @@ MigrationHandlerMain(
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER SourceState->magic = %a\n", magicstr);
   gSavedCR3 = SourceState->cr3;
 
-  // I am slightly hazy about how w should be handling cr4
-  gMMUCR4Features = AsmReadCr4();
-  // which one? 
-  //gMMUCR4Features = SourceState->cr4;
-  // dubek: the second one doesn't work for me.
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER SourceState->cr4 = 0x%lx gMMUCR4Features = 0x%lx\n", SourceState->cr4, gMMUCR4Features);
+  gMMUCR4Features = SourceState->cr4;
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER current CR4 = 0x%lx gMMUCR4Features = 0x%lx\n", AsmReadCr4(), gMMUCR4Features);
 
   // relocate pages
   gRelocatedRestoreStep2 = PcdGet32(PcdSevMigrationPagesBase);
