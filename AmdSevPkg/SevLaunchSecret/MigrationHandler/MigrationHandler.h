@@ -47,7 +47,16 @@ UINT64 gRelocatedRestoreStep2;
 #define __AC(X,Y)   (X##Y)
 #define _AC(X,Y)    __AC(X,Y)
 
+#define PAGE_OFFSET 0xffff888000000000
+#define KERNEL_OFFSET 0x1000000
+
+// we made this macro. use at your own risk. 
+#define K_OFFSET(address) (PAGE_OFFSET + KERNEL_OFFSET + address)
+
 #define __pa(x)     __phys_addr((unsigned long)(x))
+#define __va(x)         ((void *)((unsigned long)(x)+PAGE_OFFSET))
+
+typedef UINT64 phys_addr_t;
 
 // basic types for pages
 typedef unsigned long   pteval_t;
@@ -57,15 +66,24 @@ typedef unsigned long   pudval_t;
 typedef unsigned long   pteval_t;
 typedef unsigned long   pgdval_t;
 
-typedef struct { pgdval_t pmd; } pgd_t;
-typedef struct { pudval_t pmd; } pud_t;
+#define pgd_val(x)  ((x).pgd)
+#define pud_val(x)  ((x).pud)
+#define pmd_val(x)  ((x).pmd)
+#define pte_val(x)  ((x).pte)
+
+typedef struct { pgdval_t pgd; } pgd_t;
+typedef struct { pudval_t pud; } pud_t;
 typedef struct { pmdval_t pmd; } pmd_t;
-typedef struct { pmdval_t pmd; } pte_t;
+typedef struct { pmdval_t pte; } pte_t;
 
 #define __pgd(x)    ((pgd_t) { (x) } )
 #define __pmd(x)    ((pmd_t) { (x) } )
 #define __pud(x)    ((pud_t) { (x) } )
 #define __pte(x)    ((pte_t) { (x) } )
+
+#define pgd_none(pgd)       (!pgd_val(pgd))
+#define pud_none(pud)       (!pud_val(pud))
+#define pmd_none(pmd)       (!pmd_val(pmd))
 
 // Each level of our page table tree has 512 entries of 64-bit each 
 // (which together fit in one 4096-byte page)
@@ -181,7 +199,7 @@ typedef struct { unsigned long pgprot; } pgprot_t;
 #define PGD_ORDER 0
 
 #define PAGE_SHIFT 12 // 2^12 = 4096, I think this is what we want...
-
+#define __PHYSICAL_MASK_SHIFT   52
 
 #define PMD_SHIFT   (PAGE_SHIFT + (PAGE_SHIFT + PTE_ORDER - 3))
 #define PMD_SIZE    (_AC(1, UL) << PMD_SHIFT)
@@ -198,14 +216,15 @@ typedef struct { unsigned long pgprot; } pgprot_t;
 #define PGDIR_MASK  (~(PGDIR_SIZE-1))
 #define PGDIR_BITS  (PAGE_SHIFT - 3)
 
-// need to find PMD SHIFT
 #define PTRS_PER_PMD ENTRIES
 #define PTRS_PER_PUD ENTRIES
 #define PTRS_PER_PGD ENTRIES
+#define PTRS_PER_PTE ENTRIES
 
-#define pmd_index(address)  (((address) >> PMD_SHIFT) & (PTRS_PER_PMD - 1))
 #define pgd_index(address)  (((address) >> PGDIR_SHIFT) & (PTRS_PER_PGD - 1))
-#define pud_index(x)    (((x) >> PUD_SHIFT) & (PTRS_PER_PUD-1))
+#define pud_index(address)  (((address) >> PUD_SHIFT) & (PTRS_PER_PUD - 1))
+#define pmd_index(address)  (((address) >> PMD_SHIFT) & (PTRS_PER_PMD - 1))
+#define pte_index(address)  ((address >> PAGE_SHIFT) & (PTRS_PER_PTE - 1))
 
 #define PAGE_SIZE 4096
 #define FIXMAP_PMD_NUM 2 // not totally sure about this
@@ -213,6 +232,21 @@ typedef struct { unsigned long pgprot; } pgprot_t;
 // not really sure about this
 #define __default_kernel_pte_mask ~0
 
+#define pgd_offset_pgd(pgd, address) (pgd + pgd_index((address)))
+
+#define __PHYSICAL_MASK     (phys_addr_t)((1ULL << __PHYSICAL_MASK_SHIFT) - 1)
+#define PAGE_MASK       (~(PAGE_SIZE-1))
+#define PHYSICAL_PAGE_MASK  (((signed long)PAGE_MASK) & __PHYSICAL_MASK)
+#define PTE_PFN_MASK        ((pteval_t)PHYSICAL_PAGE_MASK)
+
+#define PUD_PAGE_SIZE       (_AC(1, UL) << PUD_SHIFT)
+#define PUD_PAGE_MASK       (~(PUD_PAGE_SIZE-1))
+
+#define PMD_PAGE_SIZE       (_AC(1, UL) << PMD_SHIFT)
+#define PMD_PAGE_MASK       (~(PMD_PAGE_SIZE-1))
+
+#define PHYSICAL_PMD_PAGE_MASK  (((signed long)PMD_PAGE_MASK) & __PHYSICAL_MASK)
+#define PHYSICAL_PUD_PAGE_MASK  (((signed long)PUD_PAGE_MASK) & __PHYSICAL_MASK)
 
 /*
  * MHm <--> VMM Communication

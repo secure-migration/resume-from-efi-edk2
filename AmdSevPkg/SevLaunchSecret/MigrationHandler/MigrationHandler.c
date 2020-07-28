@@ -11,6 +11,105 @@ void RestoreRegisters(void);
 void RestoreStep1(void);
 void RestoreStep2(void);
 
+// helpers for pagetable walk
+
+static inline pudval_t native_pud_val(pud_t pud)
+{
+	return pud.pud;
+}
+
+static inline pmdval_t native_pmd_val(pmd_t pmd)
+{
+	return pmd.pmd;
+}
+
+static inline pudval_t pud_pfn_mask(pud_t pud)
+{
+	if (native_pud_val(pud) & _PAGE_PSE)
+		return PHYSICAL_PUD_PAGE_MASK;
+	else
+		return PTE_PFN_MASK;
+}
+
+#define mk32 (((UINT64)1 << 32) - 1)
+static inline pmdval_t pmd_pfn_mask(pmd_t pmd)
+{
+	if (native_pmd_val(pmd) & _PAGE_PSE)
+		return PHYSICAL_PMD_PAGE_MASK;
+	else
+		return PTE_PFN_MASK;
+}
+
+
+static inline unsigned long pgd_page_vaddr(pgd_t pgd)
+{
+	//return (unsigned long)__va((unsigned long)pgd_val(pgd) & PTE_PFN_MASK & mk32);
+    return pgd_val(pgd) & PTE_PFN_MASK;
+}
+
+static inline unsigned long pud_page_vaddr(pud_t pud)
+{
+	return pud_val(pud) & pud_pfn_mask(pud);
+}
+
+static inline unsigned long pmd_page_vaddr(pmd_t pmd)
+{
+	return pmd_val(pmd) & pmd_pfn_mask(pmd);
+}
+
+/* Find an entry in the third-level page table.. */
+static inline pud_t *pud_offset(pgd_t *pgd, unsigned long address)
+{
+	return (pud_t *)pgd_page_vaddr(*pgd) + pud_index(address);
+}
+
+/* Find an entry in the second-level page table.. */
+static inline pmd_t *pmd_offset(pud_t *pud, unsigned long address)
+{
+	return (pmd_t *)pud_page_vaddr(*pud) + pmd_index(address);
+}
+
+static inline pte_t *pte_offset_kernel(pmd_t *pmd, unsigned long address)
+{
+	return (pte_t *)pmd_page_vaddr(*pmd) + pte_index(address);
+}
+
+
+int GetPa(UINT64 pgd_base, unsigned long long va){
+    pgd_t *pgd;
+    pud_t *pud;
+    pmd_t *pmd;
+    pte_t *ptep;
+    DebugPrint(DEBUG_ERROR,"MH: Searching for VA 0x%x in PGT at 0x%x\n",
+            va, pgd_base);
+
+    pgd = (pgd_t *)pgd_offset_pgd(pgd_base, va);
+    DebugPrint(DEBUG_ERROR, "MH entry address is: %p\n", (void *)pgd);
+    DebugPrint(DEBUG_ERROR, "pgd value: %llx\n", *pgd);
+    if (pgd_none(*pgd)) 
+        return -1;
+
+    pud = pud_offset(pgd, va);
+    DebugPrint(DEBUG_ERROR, "pud entry address is: %p\n", (void *)pud);
+    DebugPrint(DEBUG_ERROR, "pud value: %llx\n", pud_val(*pud));
+    if (pud_none(*pud))
+        return -2;
+
+    pmd = pmd_offset(pud, va);
+    DebugPrint(DEBUG_ERROR, "pmd entry address is: %p\n", (void *)pmd);
+    DebugPrint(DEBUG_ERROR, "pmd value: %llx\n",*pmd);
+    if (pmd_none(*pmd))
+        return -3;
+
+    ptep = pte_offset_kernel(pmd, va);
+    DebugPrint(DEBUG_ERROR, "pte entry address is: %p\n", (void *)ptep);
+    DebugPrint(DEBUG_ERROR, "pte value: %llx\n",*ptep);
+    if (!ptep)
+        return -4;
+
+    return 0;
+}
+
 // this seems a bit too simple. for one thing, are we actually doing 
 // all four levels? 
 // do we also need to mark the page as ex?
@@ -85,6 +184,16 @@ MigrationHandlerMain(
   UINT64 state_page_base = PcdGet32(PcdSevMigrationStatePageBase); 
   struct cpu_state *SourceState = (void *) state_page_base;   
 
+  struct pt_regs source_regs = SourceState->regs;
+  DebugPrint(DEBUG_ERROR,"MH: Looking for IP in source pgt\n");
+  GetPa(SourceState->cr3,source_regs.ip);
+
+  DebugPrint(DEBUG_ERROR,"MH: Looking for IP in source pgt\n");
+  GetPa(SourceState->cr3,source_regs.sp);
+
+  DebugPrint(DEBUG_ERROR,"MH: Looking for IP in source pgt\n");
+  GetPa(SourceState->cr3,source_regs.cs);
+
   // Trampoline code can live here temporarily.
   
   // populate our state structs
@@ -124,6 +233,8 @@ MigrationHandlerMain(
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: content of gRelocatedRestoreRegistersData = %a\n", (char*)((void*)gRelocatedRestoreRegistersData));
 
   GenerateIntermediatePageTables();
+
+  GetPa((UINT64)pgd,gRelocatedRestoreStep2);
 
   RestoreStep1(); 
 
