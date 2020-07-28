@@ -119,7 +119,7 @@ static void AddPageToMapping(unsigned long va, unsigned long pa){
   pmd_t new_pmd;
   /* pte_t new_pte; */
 
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER: Mapping 0x%x to 0x%x \n", va, pa);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER: Mapping 0x%llx to 0x%llx \n", va, pa);
   pgprot_t pgtable_prot = __pgprot(_KERNPG_TABLE);
   pgprot_t pmd_text_prot = __pgprot(__PAGE_KERNEL_LARGE_EXEC);
 
@@ -165,6 +165,12 @@ static void GenerateIntermediatePageTables(){
   AddPageToMapping(gRelocatedRestoreRegisters,gRelocatedRestoreRegisters);
   AddPageToMapping(gRelocatedRestoreRegistersData,gRelocatedRestoreRegistersData);
 
+  // Map the same physical pages also with the virtual addresses that will
+  // refer to these pages in the Linux kernel's page mapping (offset mapping):
+  AddPageToMapping((unsigned long)__va(gRelocatedRestoreStep2),gRelocatedRestoreStep2);
+  AddPageToMapping((unsigned long)__va(gRelocatedRestoreRegisters),gRelocatedRestoreRegisters);
+  AddPageToMapping((unsigned long)__va(gRelocatedRestoreRegistersData),gRelocatedRestoreRegistersData);
+
   gTempPGT = (UINT64)pgd;
 }
 
@@ -185,14 +191,11 @@ MigrationHandlerMain(
   struct cpu_state *SourceState = (void *) state_page_base;   
 
   struct pt_regs source_regs = SourceState->regs;
-  DebugPrint(DEBUG_ERROR,"MH: Looking for IP in source pgt\n");
-  GetPa(SourceState->cr3,source_regs.ip);
+  DebugPrint(DEBUG_ERROR,"MH: Looking for RIP in source pgt\n");
+  GetPa(cr3_to_pgt_pa(SourceState->cr3), source_regs.ip);
 
-  DebugPrint(DEBUG_ERROR,"MH: Looking for IP in source pgt\n");
-  GetPa(SourceState->cr3,source_regs.sp);
-
-  DebugPrint(DEBUG_ERROR,"MH: Looking for IP in source pgt\n");
-  GetPa(SourceState->cr3,source_regs.cs);
+  DebugPrint(DEBUG_ERROR,"MH: Looking for RSP in source pgt\n");
+  GetPa(cr3_to_pgt_pa(SourceState->cr3), source_regs.sp);
 
   // Trampoline code can live here temporarily.
   
@@ -234,7 +237,16 @@ MigrationHandlerMain(
 
   GenerateIntermediatePageTables();
 
-  GetPa((UINT64)pgd,gRelocatedRestoreStep2);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER   Temp PGD = 0x%lx\n", cr3_to_pgt_pa(pgd));
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Target PGD = 0x%lx\n", cr3_to_pgt_pa(SourceState->cr3));
+
+  GetPa(cr3_to_pgt_pa(pgd), gRelocatedRestoreStep2);
+  GetPa(cr3_to_pgt_pa(pgd), gRelocatedRestoreRegisters);
+
+  // Switch to the copy of the code in the target's address space
+  gRelocatedRestoreRegisters = (unsigned long)__va(gRelocatedRestoreRegisters);
+  GetPa(cr3_to_pgt_pa(pgd), gRelocatedRestoreRegisters);
+  GetPa(cr3_to_pgt_pa(SourceState->cr3), gRelocatedRestoreRegisters);
 
   RestoreStep1(); 
 
