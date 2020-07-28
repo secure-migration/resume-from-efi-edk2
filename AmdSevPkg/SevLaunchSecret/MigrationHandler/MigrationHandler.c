@@ -80,30 +80,30 @@ int GetPa(UINT64 pgd_base, unsigned long long va){
     pud_t *pud;
     pmd_t *pmd;
     pte_t *ptep;
-    DebugPrint(DEBUG_ERROR,"MH: Searching for VA 0x%x in PGT at 0x%x\n",
+    DebugPrint(DEBUG_ERROR,"MH: Searching for VA 0x%llx in PGT at 0x%llx\n",
             va, pgd_base);
 
     pgd = (pgd_t *)pgd_offset_pgd(pgd_base, va);
-    DebugPrint(DEBUG_ERROR, "MH entry address is: %p\n", (void *)pgd);
-    DebugPrint(DEBUG_ERROR, "pgd value: %llx\n", *pgd);
+    DebugPrint(DEBUG_ERROR, "> MH entry address is: %p\n", (void *)pgd);
+    DebugPrint(DEBUG_ERROR, "> pgd value: %llx\n", *pgd);
     if (pgd_none(*pgd)) 
         return -1;
 
     pud = pud_offset(pgd, va);
-    DebugPrint(DEBUG_ERROR, "pud entry address is: %p\n", (void *)pud);
-    DebugPrint(DEBUG_ERROR, "pud value: %llx\n", pud_val(*pud));
+    DebugPrint(DEBUG_ERROR, ">> pud entry address is: %p\n", (void *)pud);
+    DebugPrint(DEBUG_ERROR, ">> pud value: %llx\n", pud_val(*pud));
     if (pud_none(*pud))
         return -2;
 
     pmd = pmd_offset(pud, va);
-    DebugPrint(DEBUG_ERROR, "pmd entry address is: %p\n", (void *)pmd);
-    DebugPrint(DEBUG_ERROR, "pmd value: %llx\n",*pmd);
+    DebugPrint(DEBUG_ERROR, ">>> pmd entry address is: %p\n", (void *)pmd);
+    DebugPrint(DEBUG_ERROR, ">>> pmd value: %llx\n",*pmd);
     if (pmd_none(*pmd))
         return -3;
 
     ptep = pte_offset_kernel(pmd, va);
-    DebugPrint(DEBUG_ERROR, "pte entry address is: %p\n", (void *)ptep);
-    DebugPrint(DEBUG_ERROR, "pte value: %llx\n",*ptep);
+    DebugPrint(DEBUG_ERROR, ">>>> pte entry address is: %p\n", (void *)ptep);
+    DebugPrint(DEBUG_ERROR, ">>>> pte value: %llx\n",*ptep);
     if (!ptep)
         return -4;
 
