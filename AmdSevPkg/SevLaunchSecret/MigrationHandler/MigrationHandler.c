@@ -85,7 +85,7 @@ int GetPa(UINT64 pgd_base, unsigned long long va){
 
     pgd = (pgd_t *)pgd_offset_pgd(pgd_base, va);
     DebugPrint(DEBUG_ERROR, "> MH entry address is: %p\n", (void *)pgd);
-    DebugPrint(DEBUG_ERROR, "> pgd value: %llx\n", *pgd);
+    DebugPrint(DEBUG_ERROR, "> pgd value: %llx\n", pgd->pgd);
     if (pgd_none(*pgd)) 
         return -1;
 
@@ -129,12 +129,17 @@ static void AddPageToMapping(unsigned long va, unsigned long pa){
   pgprot_val(pmd_text_prot) &= __default_kernel_pte_mask;
   pgprot_val(pgtable_prot)  &= __default_kernel_pte_mask;
 
+  //new_pte = __pte(pa & PTE_MASK); // TODO | page-flags
+  //DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER: AddPageToMapping: va=%xllx pte_index=%x\n", va, pte_index(va));
+  //CopyMem(pte + pte_index(va),&new_pte,sizeof(pte_t));
+
   // i think we can just use memcpy here
   // here we are setting an entry in the pmd,
   // the destination is an index into the pmd that corresponds 
   // with the virtual address 
   // the source is the entry specifying the physical addres 
   new_pmd = __pmd((pa & PMD_MASK) | pgprot_val(pmd_text_prot));
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER: AddPageToMapping: va=0x%llx pmd_index(va)=0x%x\n", va, pmd_index(va));
   CopyMem(pmd + pmd_index(va),&new_pmd,sizeof(pmd_t));
 
   // basically the same 
@@ -144,9 +149,11 @@ static void AddPageToMapping(unsigned long va, unsigned long pa){
   // i think we can just use the address of the pmd directly. 
   // have to do some suspicious casting of pmd. 
   new_pud = __pud((UINT64)pmd | pgprot_val(pgtable_prot));
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER: AddPageToMapping: va=0x%llx pud_index(va)=0x%x\n", va, pud_index(va));
   CopyMem(pud + pud_index(va),&new_pud,sizeof(pud_t));
 
   new_pgd = __pgd((UINT64)pud | pgprot_val(pgtable_prot));
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER: AddPageToMapping: va=0x%llx pgd_index(va)=0x%x\n", va, pgd_index(va));
   CopyMem(pgd + pgd_index(va), &new_pgd, sizeof(pgd_t));
 
   // i think we need something with the pte as well
@@ -232,6 +239,42 @@ MigrationHandlerMain(
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: content of gRelocatedRestoreRegistersData = %a\n", (char*)((void*)gRelocatedRestoreRegistersData));
 
   GenerateIntermediatePageTables();
+
+  // This can help with gdb:
+  //
+  //volatile int wait = 1;
+  //while (wait) {
+  //  __asm__ __volatile__("pause");
+  //}
+
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER pgd = \n");
+  for (int i = 0; i < ENTRIES; i++) {
+    DebugPrint(DEBUG_ERROR,"%llx ", pgd[i]);
+  }
+  DebugPrint(DEBUG_ERROR,"\n");
+  DebugPrint(DEBUG_ERROR,"pgd[0x111]=%llx\n", pgd[0x111]);
+
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER pud = \n");
+  for (int i = 0; i < ENTRIES; i++) {
+    DebugPrint(DEBUG_ERROR,"%llx ", pud[i]);
+  }
+  DebugPrint(DEBUG_ERROR,"\n");
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER pmd = \n");
+  for (int i = 0; i < ENTRIES; i++) {
+    DebugPrint(DEBUG_ERROR,"%llx ", pmd[i]);
+  }
+  DebugPrint(DEBUG_ERROR,"\n");
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER pte = \n");
+  for (int i = 0; i < ENTRIES; i++) {
+    DebugPrint(DEBUG_ERROR,"%llx ", pte[i]);
+  }
+  DebugPrint(DEBUG_ERROR,"\n");
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER target CR3 pgd = \n");
+  UINT64* target_pgd = (void*)(SourceState->cr3);
+  for (int i = 0; i < ENTRIES; i++) {
+    DebugPrint(DEBUG_ERROR,"%llx ", target_pgd[i]);
+  }
+  DebugPrint(DEBUG_ERROR,"\n");
 
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER   Temp PGD = 0x%lx\n", cr3_to_pgt_pa(pgd));
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Target PGD = 0x%lx\n", cr3_to_pgt_pa(SourceState->cr3));
