@@ -83,7 +83,7 @@ int GetPa(UINT64 pgd_base, unsigned long long va){
     DebugPrint(DEBUG_ERROR,"MH: Searching for VA 0x%llx in PGT at 0x%llx\n",
             va, pgd_base);
 
-    pgd = (pgd_t *)pgd_offset_pgd(pgd_base, va);
+    pgd = pgd_offset_pgd((pgd_t*)pgd_base, va);
     DebugPrint(DEBUG_ERROR, "> MH entry address is: %p\n", (void *)pgd);
     DebugPrint(DEBUG_ERROR, "> pgd value: %llx\n", pgd->pgd);
     if (pgd_none(*pgd)) 
