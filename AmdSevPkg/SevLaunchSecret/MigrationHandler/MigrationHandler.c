@@ -31,6 +31,16 @@ static inline pudval_t pud_pfn_mask(pud_t pud)
 		return PTE_PFN_MASK;
 }
 
+static inline pudval_t pud_flags_mask(pud_t pud)
+{
+        return ~pud_pfn_mask(pud);
+}
+
+static inline pudval_t pud_flags(pud_t pud)
+{
+        return native_pud_val(pud) & pud_flags_mask(pud);
+}
+
 #define mk32 (((UINT64)1 << 32) - 1)
 static inline pmdval_t pmd_pfn_mask(pmd_t pmd)
 {
@@ -40,6 +50,15 @@ static inline pmdval_t pmd_pfn_mask(pmd_t pmd)
 		return PTE_PFN_MASK;
 }
 
+static inline pmdval_t pmd_flags_mask(pmd_t pmd)
+{
+        return ~pmd_pfn_mask(pmd);
+}
+
+static inline pmdval_t pmd_flags(pmd_t pmd)
+{
+        return native_pmd_val(pmd) & pmd_flags_mask(pmd);
+}
 
 static inline unsigned long pgd_page_vaddr(pgd_t pgd)
 {
@@ -92,18 +111,24 @@ int GetPa(UINT64 pgd_base, unsigned long long va){
     pud = pud_offset(pgd, va);
     DebugPrint(DEBUG_ERROR, ">> pud entry address is: %p\n", (void *)pud);
     DebugPrint(DEBUG_ERROR, ">> pud value: %llx\n", pud_val(*pud));
+    DebugPrint(DEBUG_ERROR, ">> pud flags: %llx\n", pud_flags(*pud));
+    DebugPrint(DEBUG_ERROR, ">> pud flags & _PAGE_PSE: %llx\n", pud_flags(*pud) & _PAGE_PSE);
     if (pud_none(*pud))
         return -2;
 
     pmd = pmd_offset(pud, va);
     DebugPrint(DEBUG_ERROR, ">>> pmd entry address is: %p\n", (void *)pmd);
-    DebugPrint(DEBUG_ERROR, ">>> pmd value: %llx\n",*pmd);
+    DebugPrint(DEBUG_ERROR, ">>> pmd value: %llx\n", pmd_val(*pmd));
+    DebugPrint(DEBUG_ERROR, ">>> pmd flags: %llx\n", pmd_flags(*pmd));
+    DebugPrint(DEBUG_ERROR, ">>> pmd flags & _PAGE_PSE: %llx\n", pmd_flags(*pmd) & _PAGE_PSE);
     if (pmd_none(*pmd))
         return -3;
 
+
+    DebugPrint(DEBUG_ERROR, ">>>> pte_index(va)=%llx\n", pte_index(va));
     ptep = pte_offset_kernel(pmd, va);
     DebugPrint(DEBUG_ERROR, ">>>> pte entry address is: %p\n", (void *)ptep);
-    DebugPrint(DEBUG_ERROR, ">>>> pte value: %llx\n",*ptep);
+    DebugPrint(DEBUG_ERROR, ">>>> pte value: %llx\n", pte_val(*ptep));
     if (!ptep)
         return -4;
 
