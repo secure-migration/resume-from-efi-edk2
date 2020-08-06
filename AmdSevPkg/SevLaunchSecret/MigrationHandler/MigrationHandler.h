@@ -144,6 +144,7 @@ extern pteval_t __default_kernel_pte_mask;
 #define _PAGE_PAT_LARGE (_AT(pteval_t, 1) << _PAGE_BIT_PAT_LARGE)
 #define _PAGE_SPECIAL   (_AT(pteval_t, 1) << _PAGE_BIT_SPECIAL)
 #define _PAGE_CPA_TEST  (_AT(pteval_t, 1) << _PAGE_BIT_CPA_TEST)
+#define _PAGE_NX        (_AT(pteval_t, 1) << _PAGE_BIT_NX)
 
 // this is slightly odd
 #define sme_me_mask  0ULL

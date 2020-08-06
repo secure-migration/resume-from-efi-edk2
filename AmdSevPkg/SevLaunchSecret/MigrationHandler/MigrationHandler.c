@@ -135,6 +135,44 @@ int GetPa(UINT64 pgd_base, unsigned long long va){
     return 0;
 }
 
+int ClearPageNXFlag(UINT64 pgd_base, unsigned long long va){
+    pgd_t *pgd;
+    pud_t *pud;
+    pmd_t *pmd;
+    pte_t *ptep;
+    DebugPrint(DEBUG_ERROR,"MH: ClearPageNXFlag: VA 0x%llx in PGT at 0x%llx\n", va, pgd_base);
+
+    pgd = pgd_offset_pgd((pgd_t*)pgd_base, va);
+    if (pgd_none(*pgd)) {
+        DebugPrint(DEBUG_ERROR, "ClearPageNXFlag quitting > pgd value: %llx\n", pgd->pgd);
+        return -1;
+    }
+
+    pud = pud_offset(pgd, va);
+    if (pud_none(*pud)) {
+        DebugPrint(DEBUG_ERROR, "ClearPageNXFlag quitting > pud value: %llx\n", pud_val(*pud));
+        return -2;
+    }
+
+    pmd = pmd_offset(pud, va);
+    if (pmd_none(*pmd)) {
+        DebugPrint(DEBUG_ERROR, "ClearPageNXFlag quitting > pmd value: %llx\n", pmd_val(*pmd));
+        return -3;
+    }
+
+    ptep = pte_offset_kernel(pmd, va);
+    if (!ptep) {
+        DebugPrint(DEBUG_ERROR, "ClearPageNXFlag quitting > pte value: %llx\n", pte_val(*ptep));
+        return -4;
+    }
+    DebugPrint(DEBUG_ERROR, "ClearPageNXFlag: pte entry address is: %p\n", (void *)ptep);
+    DebugPrint(DEBUG_ERROR, "ClearPageNXFlag: pte value before: %llx\n", pte_val(*ptep));
+    ptep->pte &= ~_PAGE_NX;
+    DebugPrint(DEBUG_ERROR, "ClearPageNXFlag: pte value after: %llx\n", pte_val(*ptep));
+
+    return 0;
+}
+
 // this seems a bit too simple. for one thing, are we actually doing 
 // all four levels? 
 // do we also need to mark the page as ex?
@@ -244,8 +282,29 @@ MigrationHandlerMain(
 
   // relocate pages
   gRelocatedRestoreStep2 = PcdGet32(PcdSevMigrationPagesBase);
+
+  //---------------------------
+  // This commented-out section is an attempt to copy our code+data to pages
+  // allocated by AllocatePages instead of pages reserved by Pcd.
+  //
+  // gBS is NULL, so instaed I use SystemTable->BootServices
+  //DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Before AllocatePages\n");
+  //EFI_PHYSICAL_ADDRESS StartAddress = 0x0;
+  //EFI_STATUS Status = SystemTable->BootServices->AllocatePages (AllocateAnyPages, EfiRuntimeServicesCode, 3, &StartAddress);
+  ////EFI_STATUS Status = SystemTable->BootServices->AllocatePages (AllocateAnyPages, EfiRuntimeServicesData, 3, &StartAddress);
+  ////EFI_STATUS Status = SystemTable->BootServices->AllocatePages (AllocateAnyPages, EfiPersistentMemory, 3, &StartAddress);
+  //DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER After  AllocatePages Status = %d StartAddress = %llx\n", Status, StartAddress);
+  //ASSERT_EFI_ERROR (Status);
+  //gRelocatedRestoreStep2 = StartAddress;
+  //
+  //---------------------------
+
   gRelocatedRestoreRegisters = gRelocatedRestoreStep2 + PAGE_SIZE;
   gRelocatedRestoreRegistersData = gRelocatedRestoreRegisters + PAGE_SIZE;
+
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreStep2 = %lx\n", gRelocatedRestoreStep2);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreRegisters = %lx\n", gRelocatedRestoreRegisters);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreRegistersData = %lx\n", gRelocatedRestoreRegistersData);
 
   CopyMem((void *)gRelocatedRestoreStep2,RestoreStep2,PAGE_SIZE);
   CopyMem((void *)gRelocatedRestoreRegisters,RestoreRegisters,PAGE_SIZE);
@@ -258,9 +317,6 @@ MigrationHandlerMain(
   // find out we can only use one page during RestoreRegisters. (0xC00 = 3KB)
   CopyMem((void *)(gRelocatedRestoreRegisters + 0xc00),SourceState,sizeof(*SourceState));
 
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreStep2 = %lx\n", gRelocatedRestoreStep2);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreRegisters = %lx\n", gRelocatedRestoreRegisters);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreRegistersData = %lx\n", gRelocatedRestoreRegistersData);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: content of gRelocatedRestoreRegistersData = %a\n", (char*)((void*)gRelocatedRestoreRegistersData));
 
   GenerateIntermediatePageTables();
@@ -309,6 +365,8 @@ MigrationHandlerMain(
 
   // Switch to the copy of the code in the target's address space
   gRelocatedRestoreRegisters = (unsigned long)__va(gRelocatedRestoreRegisters);
+  // Modify the target's page table to make our page executable
+  ClearPageNXFlag(cr3_to_pgt_pa(SourceState->cr3), gRelocatedRestoreRegisters);
   GetPa(cr3_to_pgt_pa(pgd), gRelocatedRestoreRegisters);
   GetPa(cr3_to_pgt_pa(SourceState->cr3), gRelocatedRestoreRegisters);
 
