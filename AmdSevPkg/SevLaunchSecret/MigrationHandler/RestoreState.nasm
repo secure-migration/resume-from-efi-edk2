@@ -210,6 +210,13 @@ _here_rr:
     mov     r9, qword [CPU_DATA + STATE_CR2]
     mov     cr2, r9
 
+    ; Restore EFER
+    DBG_PRINT 'DBG:EFER'
+    mov     ecx, 0xc0000080                   ; EFER MSR number
+    mov     eax, [CPU_DATA + STATE_EFER]      ; Load low 32-bits into eax
+    mov     edx, [CPU_DATA + STATE_EFER + 4]  ; Load high 32-bits into edx
+    wrmsr                                     ; Write edx:eax into the EFER MSR
+
     DBG_PRINT 'DBG:160'
     mov     r14, [CPU_DATA + STATE_REGS_IP]
     DBG_PRINT 'DBG:t.rip='
@@ -243,10 +250,9 @@ _here_rr:
     ;DBG_PRINT 'DBG:220'
 
     ; Restore flags
-    push    qword [CPU_DATA + STATE_REGS_FLAGS]
-    popf
-
-    ; TODO restore EFER
+    ; disabled because this will be performed as part of iret
+    ;push    qword [CPU_DATA + STATE_REGS_FLAGS]
+    ;popf
 
     DBG_PRINT 'DBG:260'
     ; Restore GDT
@@ -268,15 +274,30 @@ _here_rr:
     mov     ax, [CPU_DATA + STATE_GS]
     mov     gs, ax
 
+    ;DBG_PRINT 'DBG:FAKESTATE'
+    ;lea     rax, [CPU_DATA + 0x400]
+    ;mov     qword [CPU_DATA + STATE_REGS_SP], rax
+
     DBG_PRINT 'DBG:400'
-    mov     rax, [rel RestoreRegisters + 0x1000 + STATE_REGS_ORIG_AX]
-    lea     rsp, [rel RestoreRegisters + 0x1000 + STATE_REGS_IP]
+    mov     rdx, [CPU_DATA + STATE_REGS_DX]
+    mov     rax, [CPU_DATA + STATE_REGS_ORIG_AX]
+    lea     rsp, [CPU_DATA + STATE_REGS_IP]
     iretq
+
     ;mov     rax, [rax + STATE_REGS_IP]
     ;DBG_PRINT 'DBG:410'
     ;jmp     rax
     ;DBG_PRINT 'DBG:420'
     ;ret
+
+ALIGN 0x800
+ASM_PFX(TestTarget):
+_here_tt:
+    lea     rcx, [rel _here_tt]     ; RIP + 0
+    DBG_PRINT 'DBG:RIP_TT='
+    DBG_PUT_REG rcx
+    DBG_PRINT 'DBG:REACHED:TestTarget'
+    hlt
 
 
 
