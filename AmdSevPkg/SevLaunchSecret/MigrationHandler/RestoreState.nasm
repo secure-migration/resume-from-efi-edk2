@@ -284,6 +284,16 @@ _here_rr:
     lea     rsp, [CPU_DATA + STATE_REGS_IP]
     iretq
 
+_end_of_RestoreRegisters:
+
+;
+; Verify that RestoreRegisters fits in one page
+;
+%if (_end_of_RestoreRegisters - ASM_PFX(RestoreRegisters)) >= EFI_PAGE_SIZE
+  %assign rr_size _end_of_RestoreRegisters - ASM_PFX(RestoreRegisters)
+  %error Size of RestoreRegisters ( rr_size bytes ) is bigger than one page ( EFI_PAGE_SIZE bytes )
+%endif
+
     ;mov     rax, [rax + STATE_REGS_IP]
     ;DBG_PRINT 'DBG:410'
     ;jmp     rax
@@ -298,6 +308,11 @@ _here_tt:
     DBG_PUT_REG rcx
     DBG_PRINT 'DBG:REACHED:TestTarget'
     hlt
+
+%if (ASM_PFX(TestTarget) - ASM_PFX(RestoreRegisters)) != 0x800
+  %assign rr_size _end_of_RestoreRegisters - ASM_PFX(RestoreRegisters)
+  %error Size of RestoreRegisters ( rr_size bytes ) is more than 0x800 bytes and it will clash with TestTarget
+%endif
 
 
 
