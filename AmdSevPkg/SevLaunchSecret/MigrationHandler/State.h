@@ -61,9 +61,9 @@ struct cpu_state {
   UINT64 cr3;
   UINT64 cr4;
   UINT64 efer;
-  UINT16 gdt_pad;
+  char gdt_pad[6];
   struct desc_ptr gdt_desc;
-  UINT16 idt_pad;
+  char idt_pad[6];
   struct desc_ptr idt;
   char end_magic[8];
 };

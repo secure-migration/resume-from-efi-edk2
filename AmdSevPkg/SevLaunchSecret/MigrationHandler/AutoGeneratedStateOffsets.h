@@ -32,8 +32,8 @@
 #define STATE_CR3 0x00d0
 #define STATE_CR4 0x00d8
 #define STATE_EFER 0x00e0
-#define STATE_GDT_DESC 0x00ea
-#define STATE_IDT 0x00f6
-#define STATE_END_MAGIC 0x0100
+#define STATE_GDT_DESC 0x00ee
+#define STATE_IDT 0x00fe
+#define STATE_END_MAGIC 0x0108
 
-#define SIZEOF_CPU_STATE 0x0108
+#define SIZEOF_CPU_STATE 0x0110
