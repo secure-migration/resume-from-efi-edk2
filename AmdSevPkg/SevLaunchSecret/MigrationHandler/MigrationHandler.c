@@ -261,6 +261,10 @@ MigrationHandlerMain(
   UINT64 state_page_base = PcdGet32(PcdSevMigrationStatePageBase); 
   struct cpu_state *SourceState = (void *) state_page_base;   
 
+  // Change to test TestTarget's VA:
+  //DebugPrint(DEBUG_ERROR,"MH: Changing target RIP to TestTarget (FAKESTATE)\n");
+  //SourceState->regs.ip = 0xffff88800080cd00;
+
   struct pt_regs source_regs = SourceState->regs;
   DebugPrint(DEBUG_ERROR,"MH: Looking for RIP in source pgt\n");
   GetPa(cr3_to_pgt_pa(SourceState->cr3), source_regs.ip);
