@@ -3,6 +3,7 @@
  *
  */
 #include "State.h"
+#include "StateLayout.h"
 #include "MigrationHandler.h"
 
 
@@ -301,6 +302,7 @@ MigrationHandlerMain(
 
   gRelocatedRestoreRegisters = gRelocatedRestoreStep2 + PAGE_SIZE;
   gRelocatedRestoreRegistersData = gRelocatedRestoreRegisters + PAGE_SIZE;
+  UINT64 gRelocatedRestoreRegistersDataStart = gRelocatedRestoreRegistersData + CPU_STATE_OFFSET_IN_PAGE; // Extra 8 bytes so the IRETQ frame is 16-bytes aligned
 
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreStep2 = %lx\n", gRelocatedRestoreStep2);
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreRegisters = %lx\n", gRelocatedRestoreRegisters);
@@ -312,12 +314,12 @@ MigrationHandlerMain(
   // on its own page. we should be able to just add that page to the 
   // intermediate pagetable and set gRelocatedRestoreRegistersData 
   // accordingly. just going to leave for now
-  CopyMem((void *)gRelocatedRestoreRegistersData,SourceState,sizeof(*SourceState));
+  CopyMem((void *)gRelocatedRestoreRegistersDataStart,SourceState,sizeof(*SourceState));
   // Also try to copy the state data into the last 1KB of the page, in case we
   // find out we can only use one page during RestoreRegisters. (0xC00 = 3KB)
   CopyMem((void *)(gRelocatedRestoreRegisters + 0xc00),SourceState,sizeof(*SourceState));
 
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: content of gRelocatedRestoreRegistersData = %a\n", (char*)((void*)gRelocatedRestoreRegistersData));
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: content of gRelocatedRestoreRegistersDataStart = %a\n", (char*)((void*)gRelocatedRestoreRegistersDataStart));
 
   GenerateIntermediatePageTables();
 
