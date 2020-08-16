@@ -319,21 +319,12 @@ MigrationHandlerMain(
   // intermediate pagetable and set gRelocatedRestoreRegistersData 
   // accordingly. just going to leave for now
   CopyMem((void *)gRelocatedRestoreRegistersDataStart,SourceState,sizeof(*SourceState));
-  // Also try to copy the state data into the last 1KB of the page, in case we
-  // find out we can only use one page during RestoreRegisters. (0xC00 = 3KB)
-  CopyMem((void *)(gRelocatedRestoreRegisters + 0xc00),SourceState,sizeof(*SourceState));
 
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: content of gRelocatedRestoreRegistersDataStart = %a\n", (char*)((void*)gRelocatedRestoreRegistersDataStart));
 
   GenerateIntermediatePageTables();
 
-  // This can help with gdb:
-  //
-  //volatile int wait = 1;
-  //while (wait) {
-  //  __asm__ __volatile__("pause");
-  //}
-
+#if 0
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER pgd = \n");
   for (int i = 0; i < ENTRIES; i++) {
     DebugPrint(DEBUG_ERROR,"%llx ", pgd[i]);
@@ -362,6 +353,7 @@ MigrationHandlerMain(
     DebugPrint(DEBUG_ERROR,"%llx ", target_pgd[i]);
   }
   DebugPrint(DEBUG_ERROR,"\n");
+#endif
 
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER   Temp PGD = 0x%lx\n", cr3_to_pgt_pa(pgd));
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Target PGD = 0x%lx\n", cr3_to_pgt_pa(SourceState->cr3));
@@ -375,6 +367,55 @@ MigrationHandlerMain(
   ClearPageNXFlag(cr3_to_pgt_pa(SourceState->cr3), gRelocatedRestoreRegisters);
   GetPa(cr3_to_pgt_pa(pgd), gRelocatedRestoreRegisters);
   GetPa(cr3_to_pgt_pa(SourceState->cr3), gRelocatedRestoreRegisters);
+
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER GetPa of Source GDT\n");
+  GetPa(cr3_to_pgt_pa(SourceState->cr3), 0xfffffe0000001000ULL);
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER GetPa of Source IDT\n");
+  GetPa(cr3_to_pgt_pa(SourceState->cr3), 0xfffffe0000000000ULL);
+
+  // This can help with gdb:
+  //
+  volatile int wait = 0;
+  while (wait) {
+    __asm__ __volatile__("pause");
+  }
+
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Fixing GDT and calling RestoreStep1\n");
+
+  // TODO this should be recorded in cpu_state and restored from there.
+  //
+  // GDT area (virtual linux addresses):
+  //
+  // fffffe0000001000: 0x0000000000000000 0x00cf9b000000ffff
+  // fffffe0000001010: 0x00af9b000000ffff 0x00cf93000000ffff
+  // fffffe0000001020: 0x00cffb000000ffff 0x00cff3000000ffff
+  // fffffe0000001030: 0x00affb000000ffff 0x0000000000000000
+  // fffffe0000001040: 0x00008b0030004087 0x00000000fffffe00
+  // fffffe0000001050: 0x0000000000000000 0x0000000000000000
+  // fffffe0000001060: 0x0000000000000000 0x0000000000000000
+  // fffffe0000001070: 0x0000000000000000 0x0040f50000000000
+  //
+  // Fix Linux GDT entries overwritten by OVMF.
+  //
+  // This might actually write over some OVMF libary code, so do this as the
+  // last thing before calling out to our assembly functions (RestoreStep1).
+  UINT64* linux_gdt = (void*)0x3f80b000; // <-- this is the physical address but we're in identity mapping in OVMF
+  linux_gdt[ 0] = 0x0000000000000000ULL;
+  linux_gdt[ 1] = 0x00cf9b000000ffffULL;
+  linux_gdt[ 2] = 0x00af9b000000ffffULL; // CS=0x0010 (SI=2 TI=0 RPL=0)
+  linux_gdt[ 3] = 0x00cf93000000ffffULL; // SS=0x0018 (SI=3 TI=0 RPL=0)
+  linux_gdt[ 4] = 0x00cffb000000ffffULL;
+  linux_gdt[ 5] = 0x00cff3000000ffffULL;
+  linux_gdt[ 6] = 0x00affb000000ffffULL;
+  linux_gdt[ 7] = 0x0000000000000000ULL;
+  linux_gdt[ 8] = 0x00008b0030004087ULL;
+  linux_gdt[ 9] = 0x00000000fffffe00ULL;
+  linux_gdt[10] = 0x0000000000000000ULL;
+  linux_gdt[11] = 0x0000000000000000ULL;
+  linux_gdt[12] = 0x0000000000000000ULL;
+  linux_gdt[13] = 0x0000000000000000ULL;
+  linux_gdt[14] = 0x0000000000000000ULL;
+  linux_gdt[15] = 0x0040f50000000000ULL;
 
   RestoreStep1(); 
 
