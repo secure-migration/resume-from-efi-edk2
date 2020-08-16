@@ -274,9 +274,7 @@ _here_rr:
     mov     ax, [CPU_DATA + STATE_GS]
     mov     gs, ax
 
-    ;DBG_PRINT 'DBG:FAKESTATE'
-    ;lea     rax, [CPU_DATA + 0x400]
-    ;mov     qword [CPU_DATA + STATE_REGS_SP], rax
+    cli
 
     DBG_PRINT 'DBG:400'
     mov     rdx, [CPU_DATA + STATE_REGS_DX]
@@ -300,7 +298,9 @@ _end_of_RestoreRegisters:
     ;DBG_PRINT 'DBG:420'
     ;ret
 
-ALIGN 0x800
+%define TestTargetOffset 0xd00
+TIMES TestTargetOffset - (_end_of_RestoreRegisters - ASM_PFX(RestoreRegisters)) DB 0x90
+
 ASM_PFX(TestTarget):
 _here_tt:
     lea     rcx, [rel _here_tt]     ; RIP + 0
@@ -309,9 +309,9 @@ _here_tt:
     DBG_PRINT 'DBG:REACHED:TestTarget'
     hlt
 
-%if (ASM_PFX(TestTarget) - ASM_PFX(RestoreRegisters)) != 0x800
+%if (ASM_PFX(TestTarget) - ASM_PFX(RestoreRegisters)) != TestTargetOffset
   %assign rr_size _end_of_RestoreRegisters - ASM_PFX(RestoreRegisters)
-  %error Size of RestoreRegisters ( rr_size bytes ) is more than 0x800 bytes and it will clash with TestTarget
+  %error Size of RestoreRegisters ( rr_size bytes ) is more than TestTargetOffset bytes and it will clash with TestTarget
 %endif
 
 
