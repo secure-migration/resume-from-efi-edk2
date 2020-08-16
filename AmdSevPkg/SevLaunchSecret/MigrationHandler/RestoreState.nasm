@@ -155,9 +155,9 @@ _here_rr:
     DBG_PRINT 'DBG:RIP_RR='
     DBG_PUT_REG rcx
 
-    mov     rcx, [CPU_DATA + STATE_MAGIC]
-    DBG_PRINT 'DBG:magic='
-    DBG_PUT_REG rcx
+    ;mov     rcx, [CPU_DATA + STATE_MAGIC]
+    ;DBG_PRINT 'DBG:magic='
+    ;DBG_PUT_REG rcx
 
     DBG_PRINT 'DBG:70'
     mov     rcx, [CPU_DATA + STATE_CR3]
@@ -181,9 +181,9 @@ _here_rr:
     DBG_PRINT 'DBG:SETCR4_B'
     mov     cr4, rbx
 
-    lea     r10, [CPU_DATA]
-    DBG_PRINT 'DBG:data r10_A='
-    DBG_PUT_REG r10
+    ;lea     r10, [CPU_DATA]
+    ;DBG_PRINT 'DBG:data r10_A='
+    ;DBG_PUT_REG r10
 
     ; Currently the cpu_state is store in the next page in
     ; [rel RestoreRegisters + 0x1000]. If (in the future) we find out that
@@ -193,15 +193,15 @@ _here_rr:
     ;DBG_PRINT 'DBG:data r10_B='
     ;DBG_PUT_REG r10
 
-    DBG_PRINT 'DBG:90'
-    mov     r9, qword [CPU_DATA + STATE_MAGIC]
-    DBG_PRINT 'DBG:magic='
-    DBG_PUT_REG r9
+    ;DBG_PRINT 'DBG:90'
+    ;mov     r9, qword [CPU_DATA + STATE_MAGIC]
+    ;DBG_PRINT 'DBG:magic='
+    ;DBG_PUT_REG r9
 
-    DBG_PRINT 'DBG:95'
-    mov     r9, cr4
-    DBG_PRINT 'DBG:cr4='
-    DBG_PUT_REG r9
+    ;DBG_PRINT 'DBG:95'
+    ;mov     r9, cr4
+    ;DBG_PRINT 'DBG:cr4='
+    ;DBG_PUT_REG r9
 
     DBG_PRINT 'DBG:110'
     mov     r9, qword [CPU_DATA + STATE_CR0]
