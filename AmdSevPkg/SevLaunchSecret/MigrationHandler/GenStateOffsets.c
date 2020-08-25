@@ -35,6 +35,9 @@ int main() {
   GEN(ES, es);
   GEN(FS, fs);
   GEN(GS, gs);
+  GEN(TR, tr);
+  GEN(FS_BASE, fs_base);
+  GEN(GS_BASE, gs_base);
   GEN(CR0, cr0);
   GEN(CR2, cr2);
   GEN(CR3, cr3);

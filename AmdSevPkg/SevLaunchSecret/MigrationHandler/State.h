@@ -56,6 +56,10 @@ struct cpu_state {
   UINT16 es;
   UINT16 fs;
   UINT16 gs;
+  UINT16 tr;
+  char qword_pad[6];
+  UINT64 fs_base;
+  UINT64 gs_base;
   UINT64 cr0;
   UINT64 cr2;
   UINT64 cr3;

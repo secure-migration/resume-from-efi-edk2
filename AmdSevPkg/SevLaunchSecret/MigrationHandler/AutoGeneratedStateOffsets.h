@@ -27,13 +27,16 @@
 #define STATE_ES 0x00ba
 #define STATE_FS 0x00bc
 #define STATE_GS 0x00be
-#define STATE_CR0 0x00c0
-#define STATE_CR2 0x00c8
-#define STATE_CR3 0x00d0
-#define STATE_CR4 0x00d8
-#define STATE_EFER 0x00e0
-#define STATE_GDT_DESC 0x00ee
-#define STATE_IDT 0x00fe
-#define STATE_END_MAGIC 0x0108
+#define STATE_TR 0x00c0
+#define STATE_FS_BASE 0x00c8
+#define STATE_GS_BASE 0x00d0
+#define STATE_CR0 0x00d8
+#define STATE_CR2 0x00e0
+#define STATE_CR3 0x00e8
+#define STATE_CR4 0x00f0
+#define STATE_EFER 0x00f8
+#define STATE_GDT_DESC 0x0106
+#define STATE_IDT 0x0116
+#define STATE_END_MAGIC 0x0120
 
-#define SIZEOF_CPU_STATE 0x0110
+#define SIZEOF_CPU_STATE 0x0128

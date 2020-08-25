@@ -21,6 +21,8 @@ extern ASM_PFX(gRelocatedRestoreStep2)
 
 %define X86_CR4_PGE     BIT7
 
+%define FLAG_POSITION   0xf00
+
 ;
 ;arg 1:Char to print
 ;dx must be already set to the debug console port (0x402)
@@ -47,6 +49,17 @@ extern ASM_PFX(gRelocatedRestoreStep2)
     DBG_PUT_CHAR 0x0a
 %endif
 %endmacro
+
+%macro DBG_PUT_TIME 0
+%ifdef ENABLE_DEBUG
+    rdtsc
+    mov     r14, rdx
+    shl     r14, 32
+    or      r14, rax
+    DBG_PUT_REG r14
+%endif
+%endmacro
+
 
 %macro DBG_PUT_CHARS 1
     %strlen len %1
@@ -159,6 +172,8 @@ _here_rr:
     ;DBG_PRINT 'DBG:magic='
     ;DBG_PUT_REG rcx
 
+    cli
+
     DBG_PRINT 'DBG:70'
     mov     rcx, [CPU_DATA + STATE_CR3]
     mov     cr3, rcx
@@ -217,12 +232,48 @@ _here_rr:
     mov     edx, [CPU_DATA + STATE_EFER + 4]  ; Load high 32-bits into edx
     wrmsr                                     ; Write edx:eax into the EFER MSR
 
+    ;; --- Start memory restore
+    DBG_PRINT 'TIME1'
+    DBG_PUT_TIME
+
+    DBG_PRINT 'DBG:STALL'
+    mov     r11, 0x3c3c3c3c3c3c3c3c   ; Expected value
+    lea     r10, [CPU_DATA + FLAG_POSITION]
+    DBG_PUT_REG r10
+    mov     r10, [CPU_DATA + FLAG_POSITION]
+    DBG_PUT_REG r10
+
+.loop_wait_for_memory_restore:
+    mov     r10, [CPU_DATA + FLAG_POSITION]
+    cmp     r10, r11        ; Check if memory was already restored
+    jz      .wait_done
+    pause
+    ;lfence  ; <---- not sure if it helps
+    jmp     .loop_wait_for_memory_restore
+
+.wait_done:
+    DBG_PRINT 'TIME2'
+    DBG_PUT_TIME
+    ;; --- End memory restore
+
+    ; Force flush TLB
+    mov     rcx, cr3
+    mov     cr3, rcx
+
     DBG_PRINT 'DBG:160'
     mov     r14, [CPU_DATA + STATE_REGS_IP]
     DBG_PRINT 'DBG:t.rip='
     DBG_PUT_REG r14
     and     r14, ~0x7  ; align to 8-byte boundary because mov r15, [r14] fetches 8-bytes from memory
     DBG_PRINT 'DBG:t.rip&~0x7='
+    DBG_PUT_REG r14
+    mov     r15, [r14]
+    DBG_PUT_REG r15
+
+    mov     r14, [CPU_DATA + STATE_REGS_SP]
+    DBG_PUT_REG r14
+    and     r14, ~0x7  ; align to 8-byte boundary because mov r15, [r14] fetches 8-bytes from memory
+    DBG_PRINT 'DBG:t.rsp&~0x7='
     DBG_PUT_REG r14
     mov     r15, [r14]
     DBG_PUT_REG r15
@@ -254,6 +305,14 @@ _here_rr:
     ;push    qword [CPU_DATA + STATE_REGS_FLAGS]
     ;popf
 
+    ;DBG_PRINT 'DBG:TSS_A'
+    ;mov     rax, [CPU_DATA + STATE_GDT_DESC + 2]
+    ;mov     rcx, [rax + 0x40]
+    ;DBG_PUT_REG rcx
+    ;mov     rcx, [CPU_DATA + STATE_REGS_CX]
+    ;btr     rcx, 41  ; Clear bit 41 to change type from 0x0b (TSS-busy) to 0x09 (TSS-availble)
+    ;mov     [rax + 0x40], rcx
+
     DBG_PRINT 'DBG:260'
     ; Restore GDT
     lgdt    [CPU_DATA + STATE_GDT_DESC]
@@ -273,8 +332,29 @@ _here_rr:
     DBG_PRINT 'DBG:SEG_GS'
     mov     ax, [CPU_DATA + STATE_GS]
     mov     gs, ax
+    DBG_PRINT 'DBG:FS_BASE'
+    mov     ecx, 0xc0000100                      ; FS.base MSR address
+    mov     eax, [CPU_DATA + STATE_FS_BASE]      ; Load low 32-bits into eax
+    mov     edx, [CPU_DATA + STATE_FS_BASE + 4]  ; Load high 32-bits into edx
+    wrmsr                                        ; Write edx:eax into the FS.base MSR
+    DBG_PRINT 'DBG:GS_BASE'
+    mov     ecx, 0xc0000101                      ; GS.base MSR address
+    mov     eax, [CPU_DATA + STATE_GS_BASE]      ; Load low 32-bits into eax
+    mov     edx, [CPU_DATA + STATE_GS_BASE + 4]  ; Load high 32-bits into edx
+    wrmsr                                        ; Write edx:eax into the GS.base MSR
+    mov     rcx, [CPU_DATA + STATE_REGS_CX]
 
-    cli
+    ;DBG_PRINT 'DBG:TR'
+    ;mov     ax, [CPU_DATA + STATE_TR]
+    ;ltr     ax
+
+    ;; This part is just for an intermediate experiment which shows we can call
+    ;; into Linux's virtual address space and return from there.
+    ;DBG_PRINT 'DBG:CALLKERNEL'
+    ;lea     rsp, [CPU_DATA + 0x400]
+    ;mov     rax, 0xffffffff813a0d30  ; zzzloop_debugprint
+    ;call    rax
+    ;; ----------------------------------------------
 
     DBG_PRINT 'DBG:400'
     mov     rdx, [CPU_DATA + STATE_REGS_DX]
@@ -307,6 +387,13 @@ _here_tt:
     DBG_PRINT 'DBG:RIP_TT='
     DBG_PUT_REG rcx
     DBG_PRINT 'DBG:REACHED:TestTarget'
+    pop r15
+    DBG_PUT_REG r15
+    pop r15
+    DBG_PUT_REG r15
+    pop r15
+    DBG_PUT_REG r15
+    DBG_PRINT 'DBG:----'
     hlt
 
 %if (ASM_PFX(TestTarget) - ASM_PFX(RestoreRegisters)) != TestTargetOffset

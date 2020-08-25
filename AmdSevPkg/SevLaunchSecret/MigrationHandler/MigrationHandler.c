@@ -265,12 +265,16 @@ MigrationHandlerMain(
   //DebugPrint(DEBUG_ERROR,"MH: Changing target RIP to TestTarget (FAKESTATE)\n");
   //SourceState->regs.ip = 0xffff88800080cd00;
 
+  // Add 16 to RIP to skip zzzloop:
+  DebugPrint(DEBUG_ERROR,"MH: Adding 16 to target RIP to skip zzzloop\n");
+  SourceState->regs.ip += 0x10;
+
   struct pt_regs source_regs = SourceState->regs;
   DebugPrint(DEBUG_ERROR,"MH: Looking for RIP in source pgt\n");
   GetPa(cr3_to_pgt_pa(SourceState->cr3), source_regs.ip);
 
-  DebugPrint(DEBUG_ERROR,"MH: Looking for RSP in source pgt\n");
-  GetPa(cr3_to_pgt_pa(SourceState->cr3), source_regs.sp);
+  //DebugPrint(DEBUG_ERROR,"MH: Looking for RSP in source pgt\n");
+  //GetPa(cr3_to_pgt_pa(SourceState->cr3), source_regs.sp);
 
   // Trampoline code can live here temporarily.
   
@@ -318,6 +322,7 @@ MigrationHandlerMain(
   // on its own page. we should be able to just add that page to the 
   // intermediate pagetable and set gRelocatedRestoreRegistersData 
   // accordingly. just going to leave for now
+  ZeroMem((void *)gRelocatedRestoreRegistersData, PAGE_SIZE);
   CopyMem((void *)gRelocatedRestoreRegistersDataStart,SourceState,sizeof(*SourceState));
 
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: content of gRelocatedRestoreRegistersDataStart = %a\n", (char*)((void*)gRelocatedRestoreRegistersDataStart));
@@ -368,10 +373,10 @@ MigrationHandlerMain(
   GetPa(cr3_to_pgt_pa(pgd), gRelocatedRestoreRegisters);
   GetPa(cr3_to_pgt_pa(SourceState->cr3), gRelocatedRestoreRegisters);
 
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER GetPa of Source GDT\n");
-  GetPa(cr3_to_pgt_pa(SourceState->cr3), 0xfffffe0000001000ULL);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER GetPa of Source IDT\n");
-  GetPa(cr3_to_pgt_pa(SourceState->cr3), 0xfffffe0000000000ULL);
+  //DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER GetPa of Source GDT\n");
+  //GetPa(cr3_to_pgt_pa(SourceState->cr3), 0xfffffe0000001000ULL);
+  //DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER GetPa of Source IDT\n");
+  //GetPa(cr3_to_pgt_pa(SourceState->cr3), 0xfffffe0000000000ULL);
 
   // This can help with gdb:
   //
@@ -380,8 +385,17 @@ MigrationHandlerMain(
     __asm__ __volatile__("pause");
   }
 
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Fixing GDT and calling RestoreStep1\n");
+  //UINT64 handler_addr = 0xffff88800080cd00;
+  //UINT64 dummy_idt[2];
+  //dummy_idt[0] = (handler_addr & 0xffffULL) | (0x0010ULL << 16) | (0x8e00ULL << 32) | (((handler_addr >> 16) & 0xffffULL) << 48);
+  //dummy_idt[1] = handler_addr >> 32;
+  //DebugPrint(DEBUG_ERROR,"dummy_idt[0] = %016llx\n", dummy_idt[0]);
+  //DebugPrint(DEBUG_ERROR,"dummy_idt[1] = %016llx\n", dummy_idt[1]);
 
+  SystemTable->ConOut->OutputString(SystemTable->ConOut, L"MigrationHandler: Calling RestoreStep1\r\n");
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER calling RestoreStep1\n");
+
+#if 0
   // TODO this should be recorded in cpu_state and restored from there.
   //
   // GDT area (virtual linux addresses):
@@ -416,6 +430,34 @@ MigrationHandlerMain(
   linux_gdt[13] = 0x0000000000000000ULL;
   linux_gdt[14] = 0x0000000000000000ULL;
   linux_gdt[15] = 0x0040f50000000000ULL;
+
+  UINT64* my_idt = (void*)0x311c000; // <-- this is the physical address but we're in identity mapping in OVMF
+  for (int i = 0; i < 256; i++) {
+    //if (i == 11 /* NP */ || i == 12 || i == 13 /* GP */ || i == 14 /* PF */ ) {
+    if (0){
+     //   (i >= 11 && i <= 17) {
+        // fffffe0000000ff0: 0x90 0x0c 0x10 0x00 0x00 0x8e 0xc0 0x81
+        //
+        // 0x81c08e0000100c90
+        //
+        // fffffe0000000ff8: 0xff 0xff 0xff 0xff 0x00 0x00 0x00 0x00
+        //
+      my_idt[i * 2] = (handler_addr & 0xffffULL) | (0x0010ULL << 16) | (0x8e00ULL << 32) | (((handler_addr >> 16) & 0xffffULL) << 48);
+      my_idt[i * 2 + 1] = handler_addr >> 32;
+
+    } else {
+      my_idt[i * 2] = 0;
+      my_idt[i * 2 + 1] = 0;
+    }
+  }
+
+  // first two entries from linux IDT
+  my_idt[0] = 0x81c08e0000100870;
+  my_idt[1] = 0x00000000ffffffff;
+  // intr 0  handler 0xffffffff81c00870
+  my_idt[2] = 0x81c08e0300100b40;
+  my_idt[3] = 0x00000000ffffffff;
+#endif
 
   RestoreStep1(); 
 
