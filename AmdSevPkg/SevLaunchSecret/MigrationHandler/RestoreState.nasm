@@ -83,6 +83,17 @@ extern ASM_PFX(gRelocatedRestoreStep2)
 %endif
 %endmacro
 
+;
+; arg 1: MSR address
+; arg 2: Offset of value in CPU_DATA
+;
+%macro RESTORE_MSR 2
+    mov     ecx, %1                   ; MSR address
+    mov     eax, [CPU_DATA + %2]      ; Load low 32-bits into eax
+    mov     edx, [CPU_DATA + %2 + 4]  ; Load high 32-bits into edx
+    wrmsr                             ; Write edx:eax into the MSR
+%endmacro
+
 global ASM_PFX(RestoreStep1)
 ASM_PFX(RestoreStep1):
 
@@ -225,12 +236,8 @@ _here_rr:
     mov     r9, qword [CPU_DATA + STATE_CR2]
     mov     cr2, r9
 
-    ; Restore EFER
     DBG_PRINT 'DBG:EFER'
-    mov     ecx, 0xc0000080                   ; EFER MSR number
-    mov     eax, [CPU_DATA + STATE_EFER]      ; Load low 32-bits into eax
-    mov     edx, [CPU_DATA + STATE_EFER + 4]  ; Load high 32-bits into edx
-    wrmsr                                     ; Write edx:eax into the EFER MSR
+    RESTORE_MSR 0xc0000080, STATE_EFER
 
     ;; --- Start memory restore
     DBG_PRINT 'TIME1'
@@ -319,6 +326,14 @@ _here_rr:
     DBG_PRINT 'DBG:270'
     ; Restore IDT
     lidt    [CPU_DATA + STATE_IDT]
+    DBG_PRINT 'DBG:LDT'
+    ; Restore LDT to zero
+    mov ax,0
+    lldt ax
+
+    ;DBG_PRINT 'DBG:TR'
+    ;mov     ax, [CPU_DATA + STATE_TR]
+    ;ltr     ax
 
     DBG_PRINT 'DBG:SEG_DS'
     mov     ax, [CPU_DATA + STATE_DS]
@@ -332,21 +347,22 @@ _here_rr:
     DBG_PRINT 'DBG:SEG_GS'
     mov     ax, [CPU_DATA + STATE_GS]
     mov     gs, ax
+    DBG_PRINT 'DBG:STAR'
+    RESTORE_MSR 0xc0000081, STATE_STAR
+    DBG_PRINT 'DBG:LSTAR'
+    RESTORE_MSR 0xc0000082, STATE_LSTAR
+    DBG_PRINT 'DBG:CSTAR'
+    RESTORE_MSR 0xc0000083, STATE_CSTAR
+    DBG_PRINT 'DBG:FMASK'
+    RESTORE_MSR 0xc0000084, STATE_FMASK
     DBG_PRINT 'DBG:FS_BASE'
-    mov     ecx, 0xc0000100                      ; FS.base MSR address
-    mov     eax, [CPU_DATA + STATE_FS_BASE]      ; Load low 32-bits into eax
-    mov     edx, [CPU_DATA + STATE_FS_BASE + 4]  ; Load high 32-bits into edx
-    wrmsr                                        ; Write edx:eax into the FS.base MSR
+    RESTORE_MSR 0xc0000100, STATE_FS_BASE
     DBG_PRINT 'DBG:GS_BASE'
-    mov     ecx, 0xc0000101                      ; GS.base MSR address
-    mov     eax, [CPU_DATA + STATE_GS_BASE]      ; Load low 32-bits into eax
-    mov     edx, [CPU_DATA + STATE_GS_BASE + 4]  ; Load high 32-bits into edx
-    wrmsr                                        ; Write edx:eax into the GS.base MSR
-    mov     rcx, [CPU_DATA + STATE_REGS_CX]
-
-    ;DBG_PRINT 'DBG:TR'
-    ;mov     ax, [CPU_DATA + STATE_TR]
-    ;ltr     ax
+    RESTORE_MSR 0xc0000101, STATE_GS_BASE
+    DBG_PRINT 'DBG:KERNELGS_BASE'
+    RESTORE_MSR 0xc0000102, STATE_KERNELGS_BASE
+    DBG_PRINT 'DBG:TSC_AUX'
+    RESTORE_MSR 0xc0000103, STATE_TSC_AUX
 
     ;; This part is just for an intermediate experiment which shows we can call
     ;; into Linux's virtual address space and return from there.
@@ -357,6 +373,7 @@ _here_rr:
     ;; ----------------------------------------------
 
     DBG_PRINT 'DBG:400'
+    mov     rcx, [CPU_DATA + STATE_REGS_CX]
     mov     rdx, [CPU_DATA + STATE_REGS_DX]
     mov     rax, [CPU_DATA + STATE_REGS_ORIG_AX]
     lea     rsp, [CPU_DATA + STATE_REGS_IP]
