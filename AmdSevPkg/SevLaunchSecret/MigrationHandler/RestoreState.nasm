@@ -231,6 +231,9 @@ _here_rr:
 
     DBG_PRINT 'DBG:110'
     mov     r9, qword [CPU_DATA + STATE_CR0]
+    ; Clear WP (Write-Protect) bit of CR0 - this is needed to allow
+    ; calling `ltr` later in the process
+    btr     r9, 16
     mov     cr0, r9
     DBG_PRINT 'DBG:120'
     mov     r9, qword [CPU_DATA + STATE_CR2]
@@ -327,13 +330,9 @@ _here_rr:
     ; Restore IDT
     lidt    [CPU_DATA + STATE_IDT]
     DBG_PRINT 'DBG:LDT'
-    ; Restore LDT to zero
-    mov ax,0
-    lldt ax
-
-    ;DBG_PRINT 'DBG:TR'
-    ;mov     ax, [CPU_DATA + STATE_TR]
-    ;ltr     ax
+    ; Restore LDT to zero - TODO maybe need to restore from State
+    xor     ax, ax
+    lldt    ax
 
     DBG_PRINT 'DBG:SEG_DS'
     mov     ax, [CPU_DATA + STATE_DS]
@@ -363,6 +362,15 @@ _here_rr:
     RESTORE_MSR 0xc0000102, STATE_KERNELGS_BASE
     DBG_PRINT 'DBG:TSC_AUX'
     RESTORE_MSR 0xc0000103, STATE_TSC_AUX
+
+    DBG_PRINT 'DBG:TR'
+    mov     ax, [CPU_DATA + STATE_TR]
+    ltr     ax
+
+    ; Re-enable the original CR0 with WP (Write-Protect) bit turned on
+    DBG_PRINT 'DBG:CR0'
+    mov     r9, qword [CPU_DATA + STATE_CR0]
+    mov     cr0, r9
 
     ;; This part is just for an intermediate experiment which shows we can call
     ;; into Linux's virtual address space and return from there.
