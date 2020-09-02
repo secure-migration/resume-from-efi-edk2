@@ -372,6 +372,55 @@ _here_rr:
     mov     r9, qword [CPU_DATA + STATE_CR0]
     mov     cr0, r9
 
+; ----------------------------------
+;
+; TODO This section contains hard-coded values that should be extracted from the source state
+;
+
+    DBG_PRINT 'DBG:TSC'
+    mov     ecx, 0x10                   ; MSR address
+    mov     eax, 0      ; Load low 32-bits into eax
+    mov     edx, 9  ; Load high 32-bits into edx
+    wrmsr                             ; Write edx:eax into the MSR
+
+    DBG_PRINT 'DBG:APIC0'
+    mov     ecx, 0x835         ; MSR address = APIC register 350h LVT0
+    mov     eax, 0x10700       ; Load low 32-bits into eax
+    xor     edx, edx           ; Load high 32-bits into edx
+    wrmsr                      ; Write edx:eax into the MSR
+    DBG_PRINT 'DBG:APICS'
+    mov     ecx, 0x80f         ; MSR address = APIC register 0f0h SPIV Spurious Interrupt Vector Register
+    mov     eax, 0x1ff         ; Load low 32-bits into eax
+    xor     edx, edx           ; Load high 32-bits into edx
+    wrmsr                      ; Write edx:eax into the MSR
+    DBG_PRINT 'DBG:APIC1'
+    mov     ecx, 0x838         ; MSR address = APIC register 380h Timer Initial Count Register
+    mov     eax, 0x3cf53       ; Load low 32-bits into eax
+    xor     edx, edx           ; Load high 32-bits into edx
+    wrmsr                      ; Write edx:eax into the MSR
+    DBG_PRINT 'DBG:APIC2'
+    mov     ecx, 0x832         ; MSR address = APIC register 320h Timer Local Vector Table Entry
+    mov     eax, 0xec          ; Load low 32-bits into eax
+    xor     edx, edx           ; Load high 32-bits into edx
+    wrmsr                      ; Write edx:eax into the MSR
+    DBG_PRINT 'DBG:APIC3'
+    mov     ecx, 0x80b         ; MSR address = APIC register 0b0h End Of Interrupt (EOI)
+    xor     eax, eax           ; Load low 32-bits into eax
+    xor     edx, edx           ; Load high 32-bits into edx
+    wrmsr                      ; Write edx:eax into the MSR
+
+    ;[    0.000000] kvm-clock: Using msrs 4b564d01 and 4b564d00
+    ;[    0.000000] kvm-clock: cpu 0, msr 3401001, primary cpu clock
+    ;DBG_PRINT 'DBG:KVMC'
+    ;mov     ecx, 0x4b564d01
+    ;mov     eax, 0x3401001
+    ;wrmsr
+
+;
+; TODO End of hard-coded section
+;
+; ----------------------------------
+
     ;; This part is just for an intermediate experiment which shows we can call
     ;; into Linux's virtual address space and return from there.
     ;DBG_PRINT 'DBG:CALLKERNEL'
