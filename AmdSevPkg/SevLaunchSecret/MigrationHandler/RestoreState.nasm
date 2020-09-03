@@ -404,10 +404,19 @@ _here_rr:
     xor     edx, edx           ; Load high 32-bits into edx
     wrmsr                      ; Write edx:eax into the MSR
     DBG_PRINT 'DBG:APIC3'
+
+%define APIC_IR_REGS 8
+%define APIC_IR_BITS (APIC_IR_REGS * 32)
+%define REPETITIONS  16
     mov     ecx, 0x80b         ; MSR address = APIC register 0b0h End Of Interrupt (EOI)
     xor     eax, eax           ; Load low 32-bits into eax
     xor     edx, edx           ; Load high 32-bits into edx
+    mov     rdi, (REPETITIONS * APIC_IR_BITS)
+.innerloop:
     wrmsr                      ; Write edx:eax into the MSR
+    dec     rdi
+    cmp     rdi, 0
+    jne     .innerloop
 
     ;[    0.000000] kvm-clock: Using msrs 4b564d01 and 4b564d00
     ;[    0.000000] kvm-clock: cpu 0, msr 3401001, primary cpu clock
@@ -430,6 +439,7 @@ _here_rr:
     ;; ----------------------------------------------
 
     DBG_PRINT 'DBG:400'
+    mov     rdi, [CPU_DATA + STATE_REGS_DI]
     mov     rcx, [CPU_DATA + STATE_REGS_CX]
     mov     rdx, [CPU_DATA + STATE_REGS_DX]
     mov     rax, [CPU_DATA + STATE_REGS_ORIG_AX]
