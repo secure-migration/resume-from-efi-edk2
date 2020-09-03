@@ -266,8 +266,8 @@ MigrationHandlerMain(
   //SourceState->regs.ip = 0xffff88800080cd00;
 
   // Add 16 to RIP to skip zzzloop:
-  DebugPrint(DEBUG_ERROR,"MH: Adding 16 to target RIP to skip zzzloop\n");
-  SourceState->regs.ip += 0x10;
+  //DebugPrint(DEBUG_ERROR,"MH: Adding 16 to target RIP to skip zzzloop\n");
+  //SourceState->regs.ip += 0x10;
 
   struct pt_regs source_regs = SourceState->regs;
   DebugPrint(DEBUG_ERROR,"MH: Looking for RIP in source pgt\n");
