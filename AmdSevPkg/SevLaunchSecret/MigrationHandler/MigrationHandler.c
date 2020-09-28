@@ -94,84 +94,34 @@ static inline pte_t *pte_offset_kernel(pmd_t *pmd, unsigned long address)
 	return (pte_t *)pmd_page_vaddr(*pmd) + pte_index(address);
 }
 
-// a function for testing page tables. this will traverse 
-// a given page table tree and resolve a va to a pa.
-int GetPa(UINT64 pgd_base, unsigned long long va){
-    pgd_t *pgd;
-    pud_t *pud;
-    pmd_t *pmd;
-    pte_t *ptep;
-    DebugPrint(DEBUG_ERROR,"MH: Searching for VA 0x%llx in PGT at 0x%llx\n",
-            va, pgd_base);
-
-    pgd = pgd_offset_pgd((pgd_t*)pgd_base, va);
-    DebugPrint(DEBUG_ERROR, "> MH entry address is: %p\n", (void *)pgd);
-    DebugPrint(DEBUG_ERROR, "> pgd value: %llx\n", pgd->pgd);
-    if (pgd_none(*pgd)) 
-        return -1;
-
-    pud = pud_offset(pgd, va);
-    DebugPrint(DEBUG_ERROR, ">> pud entry address is: %p\n", (void *)pud);
-    DebugPrint(DEBUG_ERROR, ">> pud value: %llx\n", pud_val(*pud));
-    DebugPrint(DEBUG_ERROR, ">> pud flags: %llx\n", pud_flags(*pud));
-    DebugPrint(DEBUG_ERROR, ">> pud flags & _PAGE_PSE: %llx\n", pud_flags(*pud) & _PAGE_PSE);
-    if (pud_none(*pud))
-        return -2;
-
-    pmd = pmd_offset(pud, va);
-    DebugPrint(DEBUG_ERROR, ">>> pmd entry address is: %p\n", (void *)pmd);
-    DebugPrint(DEBUG_ERROR, ">>> pmd value: %llx\n", pmd_val(*pmd));
-    DebugPrint(DEBUG_ERROR, ">>> pmd flags: %llx\n", pmd_flags(*pmd));
-    DebugPrint(DEBUG_ERROR, ">>> pmd flags & _PAGE_PSE: %llx\n", pmd_flags(*pmd) & _PAGE_PSE);
-    if (pmd_none(*pmd))
-        return -3;
-
-
-    DebugPrint(DEBUG_ERROR, ">>>> pte_index(va)=%llx\n", pte_index(va));
-    ptep = pte_offset_kernel(pmd, va);
-    DebugPrint(DEBUG_ERROR, ">>>> pte entry address is: %p\n", (void *)ptep);
-    DebugPrint(DEBUG_ERROR, ">>>> pte value: %llx\n", pte_val(*ptep));
-    if (!ptep)
-        return -4;
-
-    return 0;
-}
-
 // This is a temporary workaround. See main for details
 int ClearPageNXFlag(UINT64 pgd_base, unsigned long long va){
     pgd_t *pgd;
     pud_t *pud;
     pmd_t *pmd;
     pte_t *ptep;
-    DebugPrint(DEBUG_ERROR,"MH: ClearPageNXFlag: VA 0x%llx in PGT at 0x%llx\n", va, pgd_base);
+    //DebugPrint(DEBUG_ERROR,"MH: ClearPageNXFlag: VA 0x%llx in PGT at 0x%llx\n", va, pgd_base);
 
     pgd = pgd_offset_pgd((pgd_t*)pgd_base, va);
     if (pgd_none(*pgd)) {
-        DebugPrint(DEBUG_ERROR, "ClearPageNXFlag quitting > pgd value: %llx\n", pgd->pgd);
         return -1;
     }
 
     pud = pud_offset(pgd, va);
     if (pud_none(*pud)) {
-        DebugPrint(DEBUG_ERROR, "ClearPageNXFlag quitting > pud value: %llx\n", pud_val(*pud));
         return -2;
     }
 
     pmd = pmd_offset(pud, va);
     if (pmd_none(*pmd)) {
-        DebugPrint(DEBUG_ERROR, "ClearPageNXFlag quitting > pmd value: %llx\n", pmd_val(*pmd));
         return -3;
     }
 
     ptep = pte_offset_kernel(pmd, va);
     if (!ptep) {
-        DebugPrint(DEBUG_ERROR, "ClearPageNXFlag quitting > pte value: %llx\n", pte_val(*ptep));
         return -4;
     }
-    DebugPrint(DEBUG_ERROR, "ClearPageNXFlag: pte entry address is: %p\n", (void *)ptep);
-    DebugPrint(DEBUG_ERROR, "ClearPageNXFlag: pte value before: %llx\n", pte_val(*ptep));
     ptep->pte &= ~_PAGE_NX;
-    DebugPrint(DEBUG_ERROR, "ClearPageNXFlag: pte value after: %llx\n", pte_val(*ptep));
 
     return 0;
 }
@@ -192,15 +142,12 @@ static void AddPageToMapping(unsigned long va, unsigned long pa){
   pgprot_val(pgtable_prot)  &= __default_kernel_pte_mask;
 
   new_pmd = __pmd((pa & PMD_MASK) | pgprot_val(pmd_text_prot));
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER: AddPageToMapping: va=0x%llx pmd_index(va)=0x%x\n", va, pmd_index(va));
   CopyMem(pmd + pmd_index(va),&new_pmd,sizeof(pmd_t));
 
   new_pud = __pud((UINT64)pmd | pgprot_val(pgtable_prot));
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER: AddPageToMapping: va=0x%llx pud_index(va)=0x%x\n", va, pud_index(va));
   CopyMem(pud + pud_index(va),&new_pud,sizeof(pud_t));
 
   new_pgd = __pgd((UINT64)pud | pgprot_val(pgtable_prot));
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER: AddPageToMapping: va=0x%llx pgd_index(va)=0x%x\n", va, pgd_index(va));
   CopyMem(pgd + pgd_index(va), &new_pgd, sizeof(pgd_t));
 
 }
@@ -208,11 +155,6 @@ static void AddPageToMapping(unsigned long va, unsigned long pa){
 // setup a page table for stage 2 of the trampoline 
 // that maps the code for both stage 2 and stage 3.
 static void GenerateIntermediatePageTables(){
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pgd = %p\n", pgd);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pud = %p\n", pud);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pmd = %p\n", pmd);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER PrepareMemory pte = %p\n", pte);
-
   // since OVMF has a direct mapping, VA = PA
   AddPageToMapping(gRelocatedRestoreStep2,gRelocatedRestoreStep2);
   AddPageToMapping(gRelocatedRestoreRegisters,gRelocatedRestoreRegisters);
@@ -236,6 +178,8 @@ MigrationHandlerMain(
   IN EFI_SYSTEM_TABLE     *SystemTable
   )
 {
+  SystemTable->ConOut->OutputString(SystemTable->ConOut, L"MIGRATION HANDLER\r\n");
+
   // The cpu state from the source is passed in via FW_CFG and 
   // copied to this page.
   UINT64 state_page_base = PcdGet32(PcdSevMigrationStatePageBase); 
@@ -244,19 +188,11 @@ MigrationHandlerMain(
   // we can access parts of this page via the pt_regs struct
   // we mainly use this for testing
   // maybe remove some of the testing code here
-  struct pt_regs source_regs = SourceState->regs;
-  DebugPrint(DEBUG_ERROR,"MH: Looking for RIP in source pgt\n");
-  GetPa(cr3_to_pgt_pa(SourceState->cr3), source_regs.ip);
-  
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Address of RestoreRegisters = %p\n", RestoreRegisters);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Address of RestoreRegistersData = %p\n", &RestoreRegistersData);
 
   char *magicstr = SourceState->magic;
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER SourceState->magic = %a\n", magicstr);
-  gSavedCR3 = SourceState->cr3;
 
   gMMUCR4Features = SourceState->cr4;
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER current CR4 = 0x%lx gMMUCR4Features = 0x%lx\n", AsmReadCr4(), gMMUCR4Features);
 
   // We need to be somewhat careful about how we setup the 
   // pages for our trampoline.
@@ -275,26 +211,14 @@ MigrationHandlerMain(
 
   UINT64 gRelocatedRestoreRegistersDataStart = gRelocatedRestoreRegistersData + CPU_STATE_OFFSET_IN_PAGE; // Extra 8 bytes so the IRETQ frame is 16-bytes aligned
 
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreStep2 = %lx\n", gRelocatedRestoreStep2);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreRegisters = %lx\n", gRelocatedRestoreRegisters);
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: gRelocatedRestoreRegistersData = %lx\n", gRelocatedRestoreRegistersData);
-
   CopyMem((void *)gRelocatedRestoreStep2,RestoreStep2,PAGE_SIZE);
   CopyMem((void *)gRelocatedRestoreRegisters,RestoreRegisters,PAGE_SIZE);
   
   ZeroMem((void *)gRelocatedRestoreRegistersData, PAGE_SIZE);
   CopyMem((void *)gRelocatedRestoreRegistersDataStart,SourceState,sizeof(*SourceState));
 
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER New pages: content of gRelocatedRestoreRegistersDataStart = %a\n", (char*)((void*)gRelocatedRestoreRegistersDataStart));
-
   // Now add the mappings for stages two and three. 
   GenerateIntermediatePageTables();
-
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER   Temp PGD = 0x%lx\n", cr3_to_pgt_pa(pgd));
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER Target PGD = 0x%lx\n", cr3_to_pgt_pa(SourceState->cr3));
-
-  GetPa(cr3_to_pgt_pa(pgd), gRelocatedRestoreStep2);
-  GetPa(cr3_to_pgt_pa(pgd), gRelocatedRestoreRegisters);
 
   // Switch to the copy of the code in the target's address space
   gRelocatedRestoreRegisters = (unsigned long)__va(gRelocatedRestoreRegisters);
@@ -304,11 +228,9 @@ MigrationHandlerMain(
   // location will be mapped. For that to work, we need to modify
   // the NX bit of the source page table. 
   ClearPageNXFlag(cr3_to_pgt_pa(SourceState->cr3), gRelocatedRestoreRegisters);
-  GetPa(cr3_to_pgt_pa(pgd), gRelocatedRestoreRegisters);
-  GetPa(cr3_to_pgt_pa(SourceState->cr3), gRelocatedRestoreRegisters);
 
 
-  //SystemTable->ConOut->OutputString(SystemTable->ConOut, L"MigrationHandler: Calling RestoreStep1\r\n");
+  SystemTable->ConOut->OutputString(SystemTable->ConOut, L"Starting Trampoline\r\n");
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER calling RestoreStep1\n");
 
   // start the trampoline
