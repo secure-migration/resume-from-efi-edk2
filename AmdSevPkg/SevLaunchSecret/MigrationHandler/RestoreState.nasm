@@ -5,14 +5,6 @@
   DEFAULT REL
   SECTION .text
 
-;extern ASM_PFX(MyTarget)
-;extern ASM_PFX(gSavedCR0)
-;extern ASM_PFX(gSavedCR2)
-;extern ASM_PFX(gSavedCR3)
-;extern ASM_PFX(gSavedCR4)
-;extern ASM_PFX(gSavedRIP)
-;extern ASM_PFX(gSavedGDTDesc)
-;extern ASM_PFX(gSavedContext)
 extern ASM_PFX(gRelocatedRestoreRegisters)
 extern ASM_PFX(gRelocatedRestoreRegistersData)
 extern ASM_PFX(gTempPGT)
@@ -147,13 +139,8 @@ _here_rs2:
     mov     rcx, cr3
     mov     cr3, rcx
 
-    ; i think this may have been a mistake?
-    ; mov     rbx, cr4
-
     ; Turn PGE back on
     mov     cr4, rbx
-
-    ; Note: Not using the pbe loop from linux kernel
 
     ; Jump to the relocated RestoreRegisters
     jmp	r8
@@ -179,10 +166,6 @@ _here_rr:
     DBG_PRINT 'DBG:RIP_RR='
     DBG_PUT_REG rcx
 
-    ;mov     rcx, [CPU_DATA + STATE_MAGIC]
-    ;DBG_PRINT 'DBG:magic='
-    ;DBG_PUT_REG rcx
-
     cli
 
     DBG_PRINT 'DBG:70'
@@ -191,7 +174,7 @@ _here_rr:
     DBG_PRINT 'DBG:cr3='
     DBG_PUT_REG rcx
 
-    ;; Turn off PGE (Page Global Enabled)
+    ; Turn off PGE (Page Global Enabled)
     DBG_PRINT 'DBG:PGEOFF'
     mov     rcx, rbx
     and     rcx, ~X86_CR4_PGE
@@ -203,31 +186,9 @@ _here_rr:
     mov     rcx, cr3
     mov     cr3, rcx
 
-    ;; Turn PGE back on
+    ; Turn PGE back on
     DBG_PRINT 'DBG:SETCR4_B'
     mov     cr4, rbx
-
-    ;lea     r10, [CPU_DATA]
-    ;DBG_PRINT 'DBG:data r10_A='
-    ;DBG_PUT_REG r10
-
-    ; Currently the cpu_state is store in the next page in
-    ; [rel RestoreRegisters + 0x1000]. If (in the future) we find out that
-    ; we need to fit everything in one page, we can put the cpu_state in the
-    ; last 1KB of this page as follows:
-    ;lea      r10, [rel RestoreRegisters + 0xC00]
-    ;DBG_PRINT 'DBG:data r10_B='
-    ;DBG_PUT_REG r10
-
-    ;DBG_PRINT 'DBG:90'
-    ;mov     r9, qword [CPU_DATA + STATE_MAGIC]
-    ;DBG_PRINT 'DBG:magic='
-    ;DBG_PUT_REG r9
-
-    ;DBG_PRINT 'DBG:95'
-    ;mov     r9, cr4
-    ;DBG_PRINT 'DBG:cr4='
-    ;DBG_PUT_REG r9
 
     DBG_PRINT 'DBG:110'
     mov     r9, qword [CPU_DATA + STATE_CR0]
@@ -258,7 +219,6 @@ _here_rr:
     cmp     r10, r11        ; Check if memory was already restored
     jz      .wait_done
     pause
-    ;lfence  ; <---- not sure if it helps
     jmp     .loop_wait_for_memory_restore
 
 .wait_done:
@@ -288,40 +248,22 @@ _here_rr:
     mov     r15, [r14]
     DBG_PUT_REG r15
 
-    ;DBG_PRINT 'DBG:180'
     ; Restore all registers except rax
     mov     rsp, [CPU_DATA + STATE_REGS_SP]
     mov     rbp, [CPU_DATA + STATE_REGS_BP]
     mov     rsi, [CPU_DATA + STATE_REGS_SI]
     mov     rdi, [CPU_DATA + STATE_REGS_DI]
-    ;DBG_PRINT 'DBG:190'
     mov     rbx, [CPU_DATA + STATE_REGS_BX]
     mov     rcx, [CPU_DATA + STATE_REGS_CX]
     mov     rdx, [CPU_DATA + STATE_REGS_DX]
     mov     r8,  [CPU_DATA + STATE_REGS_R8]
-    ;DBG_PRINT 'DBG:200'
     mov     r9,  [CPU_DATA + STATE_REGS_R9]
     mov     r10, [CPU_DATA + STATE_REGS_R10]
     mov     r11, [CPU_DATA + STATE_REGS_R11]
     mov     r12, [CPU_DATA + STATE_REGS_R12]
-    ;DBG_PRINT 'DBG:210'
     mov     r13, [CPU_DATA + STATE_REGS_R13]
     mov     r14, [CPU_DATA + STATE_REGS_R14]
     mov     r15, [CPU_DATA + STATE_REGS_R15]
-    ;DBG_PRINT 'DBG:220'
-
-    ; Restore flags
-    ; disabled because this will be performed as part of iret
-    ;push    qword [CPU_DATA + STATE_REGS_FLAGS]
-    ;popf
-
-    ;DBG_PRINT 'DBG:TSS_A'
-    ;mov     rax, [CPU_DATA + STATE_GDT_DESC + 2]
-    ;mov     rcx, [rax + 0x40]
-    ;DBG_PUT_REG rcx
-    ;mov     rcx, [CPU_DATA + STATE_REGS_CX]
-    ;btr     rcx, 41  ; Clear bit 41 to change type from 0x0b (TSS-busy) to 0x09 (TSS-availble)
-    ;mov     [rax + 0x40], rcx
 
     DBG_PRINT 'DBG:260'
     ; Restore GDT
@@ -418,25 +360,10 @@ _here_rr:
     cmp     rdi, 0
     jne     .innerloop
 
-    ;[    0.000000] kvm-clock: Using msrs 4b564d01 and 4b564d00
-    ;[    0.000000] kvm-clock: cpu 0, msr 3401001, primary cpu clock
-    ;DBG_PRINT 'DBG:KVMC'
-    ;mov     ecx, 0x4b564d01
-    ;mov     eax, 0x3401001
-    ;wrmsr
-
 ;
 ; TODO End of hard-coded section
 ;
 ; ----------------------------------
-
-    ;; This part is just for an intermediate experiment which shows we can call
-    ;; into Linux's virtual address space and return from there.
-    ;DBG_PRINT 'DBG:CALLKERNEL'
-    ;lea     rsp, [CPU_DATA + 0x400]
-    ;mov     rax, 0xffffffff813a0d30  ; zzzloop_debugprint
-    ;call    rax
-    ;; ----------------------------------------------
 
     DBG_PRINT 'DBG:400'
     mov     rdi, [CPU_DATA + STATE_REGS_DI]
@@ -455,36 +382,6 @@ _end_of_RestoreRegisters:
   %assign rr_size _end_of_RestoreRegisters - ASM_PFX(RestoreRegisters)
   %error Size of RestoreRegisters ( rr_size bytes ) is bigger than one page ( EFI_PAGE_SIZE bytes )
 %endif
-
-    ;mov     rax, [rax + STATE_REGS_IP]
-    ;DBG_PRINT 'DBG:410'
-    ;jmp     rax
-    ;DBG_PRINT 'DBG:420'
-    ;ret
-
-%define TestTargetOffset 0xd00
-TIMES TestTargetOffset - (_end_of_RestoreRegisters - ASM_PFX(RestoreRegisters)) DB 0x90
-
-ASM_PFX(TestTarget):
-_here_tt:
-    lea     rcx, [rel _here_tt]     ; RIP + 0
-    DBG_PRINT 'DBG:RIP_TT='
-    DBG_PUT_REG rcx
-    DBG_PRINT 'DBG:REACHED:TestTarget'
-    pop r15
-    DBG_PUT_REG r15
-    pop r15
-    DBG_PUT_REG r15
-    pop r15
-    DBG_PUT_REG r15
-    DBG_PRINT 'DBG:----'
-    hlt
-
-%if (ASM_PFX(TestTarget) - ASM_PFX(RestoreRegisters)) != TestTargetOffset
-  %assign rr_size _end_of_RestoreRegisters - ASM_PFX(RestoreRegisters)
-  %error Size of RestoreRegisters ( rr_size bytes ) is more than TestTargetOffset bytes and it will clash with TestTarget
-%endif
-
 
 
   SECTION .data
