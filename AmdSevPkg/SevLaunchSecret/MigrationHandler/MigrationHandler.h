@@ -13,14 +13,6 @@
 //
 // Variables used by RestoreState.nasm
 //
-UINT64 gSavedRIP;
-UINT64 gSavedCR0;
-UINT64 gSavedCR2;
-UINT64 gSavedCR3;
-UINT64 gSavedCR4;
-struct desc_ptr gSavedGDTDesc;
-struct pt_regs gSavedContext;
-
 UINT64 gRelocatedRestoreRegisters;
 UINT64 gRelocatedRestoreRegistersData;
 UINT64 gTempPGT;
