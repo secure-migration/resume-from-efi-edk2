@@ -89,11 +89,6 @@ extern ASM_PFX(gRelocatedRestoreStep2)
 global ASM_PFX(RestoreStep1)
 ASM_PFX(RestoreStep1):
 
-_here_rs1:
-    lea     rcx, [rel _here_rs1]     ; RIP + 0
-    DBG_PRINT 'DBG:RIP_RS1='
-    DBG_PUT_REG rcx
-
     DBG_PRINT 'RSTR1:74'
     mov     r8, qword [gRelocatedRestoreRegisters]
     mov     r10, qword [gRelocatedRestoreRegistersData]
@@ -115,11 +110,6 @@ _here_rs1:
 ALIGN EFI_PAGE_SIZE
 global ASM_PFX(RestoreStep2)
 ASM_PFX(RestoreStep2):
-
-_here_rs2:
-    lea     rcx, [rel _here_rs2]     ; RIP + 0
-    DBG_PRINT 'DBG:RIP_RS2='
-    DBG_PUT_REG rcx
 
     ; Switch to temporary PGD (from r11)
     DBG_PRINT 'RSTR2:96'
@@ -146,25 +136,20 @@ _here_rs2:
     jmp	r8
 
 
-; The RestoreRegistersData page (which holds the struct cpu_state) is
-; positioned exactly 1 page (0x1000 bytes) after RestoreRegisters. So from any
-; instruction we can use this RIP-relative addressing to access the cpu_state
-; struct.
+; The CpuStateDataPage (which holds the struct cpu_state) is
+; positioned exactly 1 page (0x1000 bytes) after RestoreRegisters. From any
+; instruction inside RestoreRegisters we can use this RIP-relative addressing
+; to access the cpu_state struct.
 %define CPU_DATA rel RestoreRegisters + 0x1000 + CPU_STATE_OFFSET_IN_PAGE
 
 ; Inputs:
-;   As explained above in CPU_DATA, this code expects the RestoreRegistersData
+;   As explained above in CPU_DATA, this code expects the CpuStateDataPage
 ;   which holds struct cpu_state to be exactly one page (0x1000 bytes) after
 ;   the beginning of this function.
 ;
 ALIGN EFI_PAGE_SIZE
 global ASM_PFX(RestoreRegisters)
 ASM_PFX(RestoreRegisters):
-
-_here_rr:
-    lea     rcx, [rel _here_rr]     ; RIP + 0
-    DBG_PRINT 'DBG:RIP_RR='
-    DBG_PUT_REG rcx
 
     cli
 
@@ -229,24 +214,6 @@ _here_rr:
     ; Force flush TLB
     mov     rcx, cr3
     mov     cr3, rcx
-
-    DBG_PRINT 'DBG:160'
-    mov     r14, [CPU_DATA + STATE_REGS_IP]
-    DBG_PRINT 'DBG:t.rip='
-    DBG_PUT_REG r14
-    and     r14, ~0x7  ; align to 8-byte boundary because mov r15, [r14] fetches 8-bytes from memory
-    DBG_PRINT 'DBG:t.rip&~0x7='
-    DBG_PUT_REG r14
-    mov     r15, [r14]
-    DBG_PUT_REG r15
-
-    mov     r14, [CPU_DATA + STATE_REGS_SP]
-    DBG_PUT_REG r14
-    and     r14, ~0x7  ; align to 8-byte boundary because mov r15, [r14] fetches 8-bytes from memory
-    DBG_PRINT 'DBG:t.rsp&~0x7='
-    DBG_PUT_REG r14
-    mov     r15, [r14]
-    DBG_PUT_REG r15
 
     ; Restore all registers except rax
     mov     rsp, [CPU_DATA + STATE_REGS_SP]
@@ -320,10 +287,10 @@ _here_rr:
 ;
 
     DBG_PRINT 'DBG:TSC'
-    mov     ecx, 0x10                   ; MSR address
-    mov     eax, 0      ; Load low 32-bits into eax
-    mov     edx, 9  ; Load high 32-bits into edx
-    wrmsr                             ; Write edx:eax into the MSR
+    mov     ecx, 0x10          ; MSR address
+    mov     eax, 0             ; Load low 32-bits into eax
+    mov     edx, 9             ; Load high 32-bits into edx
+    wrmsr                      ; Write edx:eax into the MSR
 
     DBG_PRINT 'DBG:APIC0'
     mov     ecx, 0x835         ; MSR address = APIC register 350h LVT0
@@ -366,10 +333,12 @@ _here_rr:
 ; ----------------------------------
 
     DBG_PRINT 'DBG:400'
+    ; Restored clobbered registers
     mov     rdi, [CPU_DATA + STATE_REGS_DI]
     mov     rcx, [CPU_DATA + STATE_REGS_CX]
     mov     rdx, [CPU_DATA + STATE_REGS_DX]
     mov     rax, [CPU_DATA + STATE_REGS_ORIG_AX]
+    ; Point RSP to to the iretq frame structure
     lea     rsp, [CPU_DATA + STATE_REGS_IP]
     iretq
 
@@ -386,9 +355,12 @@ _end_of_RestoreRegisters:
 
   SECTION .data
 
-global ASM_PFX(RestoreRegistersData)
+;
+; The CpuStateDataPage is located exactly 4096 bytes after the step 3 page
+; such that all the references to it inside step 3 are relative.
+;
 ALIGN EFI_PAGE_SIZE
-ASM_PFX(RestoreRegistersData):
+CpuStateDataPage:
     TIMES EFI_PAGE_SIZE DB 0
 
 global ASM_PFX(pgd)

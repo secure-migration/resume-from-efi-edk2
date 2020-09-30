@@ -84,8 +84,6 @@ typedef struct { pmdval_t pte; } pte_t;
 // (which together fit in one 4096-byte page)
 #define ENTRIES (EFI_PAGE_SIZE / sizeof(UINT64))
 
-extern struct cpu_state RestoreRegistersData;
-
 // the four levels of our page table (in order)
 extern UINT64 pgd[ENTRIES];
 extern UINT64 pud[ENTRIES];
