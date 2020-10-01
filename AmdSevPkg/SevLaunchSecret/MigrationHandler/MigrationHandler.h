@@ -13,7 +13,7 @@
 //
 // Variables used by RestoreState.nasm
 //
-UINT64 gRelocatedRestoreRegisters;
+UINT64 gRelocatedResumeCpuStatePhase3;
 UINT64 gRelocatedCpuStateDataPage;
 UINT64 gTempPGT;
 UINT64 gMMUCR4Features;
@@ -22,7 +22,7 @@ UINT64 gRelocatedResumeCpuStatePhase2;
 // Defined in RestoreState.nasm
 void ResumeCpuStatePhase1(void);
 void ResumeCpuStatePhase2(void);
-void RestoreRegisters(void);
+void ResumeCpuStatePhase3(void);
 
 /*
  * CREATING INTERMEDIATE PAGE TABLES

@@ -151,15 +151,15 @@ static void AddPageToMapping(unsigned long va, unsigned long pa){
 // that maps the code for both stage 2 and stage 3.
 static void GenerateIntermediatePageTables(){
   // since OVMF has a direct mapping, VA = PA
-  AddPageToMapping(gRelocatedResumeCpuStatePhase2,gRelocatedResumeCpuStatePhase2);
-  AddPageToMapping(gRelocatedRestoreRegisters,gRelocatedRestoreRegisters);
-  AddPageToMapping(gRelocatedCpuStateDataPage,gRelocatedCpuStateDataPage);
+  AddPageToMapping(gRelocatedResumeCpuStatePhase2, gRelocatedResumeCpuStatePhase2);
+  AddPageToMapping(gRelocatedResumeCpuStatePhase3, gRelocatedResumeCpuStatePhase3);
+  AddPageToMapping(gRelocatedCpuStateDataPage, gRelocatedCpuStateDataPage);
 
   // Map the same physical pages also with the virtual addresses that will
   // refer to these pages in the Linux kernel's page mapping (offset mapping):
-  AddPageToMapping((unsigned long)__va(gRelocatedResumeCpuStatePhase2),gRelocatedResumeCpuStatePhase2);
-  AddPageToMapping((unsigned long)__va(gRelocatedRestoreRegisters),gRelocatedRestoreRegisters);
-  AddPageToMapping((unsigned long)__va(gRelocatedCpuStateDataPage),gRelocatedCpuStateDataPage);
+  AddPageToMapping((unsigned long)__va(gRelocatedResumeCpuStatePhase2), gRelocatedResumeCpuStatePhase2);
+  AddPageToMapping((unsigned long)__va(gRelocatedResumeCpuStatePhase3), gRelocatedResumeCpuStatePhase3);
+  AddPageToMapping((unsigned long)__va(gRelocatedCpuStateDataPage), gRelocatedCpuStateDataPage);
 
   gTempPGT = (UINT64)pgd;
 }
@@ -201,28 +201,28 @@ MigrationHandlerMain(
   // we will move them to a known address that we set aside 
   // with a HOB in PEI.
   gRelocatedResumeCpuStatePhase2 = PcdGet32(PcdSevMigrationPagesBase);
-  gRelocatedRestoreRegisters = gRelocatedResumeCpuStatePhase2 + PAGE_SIZE;
-  gRelocatedCpuStateDataPage = gRelocatedRestoreRegisters + PAGE_SIZE;
+  gRelocatedResumeCpuStatePhase3 = gRelocatedResumeCpuStatePhase2 + PAGE_SIZE;
+  gRelocatedCpuStateDataPage = gRelocatedResumeCpuStatePhase3 + PAGE_SIZE;
 
   UINT64 gRelocatedCpuStateStart = gRelocatedCpuStateDataPage + CPU_STATE_OFFSET_IN_PAGE; // Extra 8 bytes so the IRETQ frame is 16-bytes aligned
 
-  CopyMem((void *)gRelocatedResumeCpuStatePhase2,ResumeCpuStatePhase2,PAGE_SIZE);
-  CopyMem((void *)gRelocatedRestoreRegisters,RestoreRegisters,PAGE_SIZE);
+  CopyMem((void *)gRelocatedResumeCpuStatePhase2, ResumeCpuStatePhase2, PAGE_SIZE);
+  CopyMem((void *)gRelocatedResumeCpuStatePhase3, ResumeCpuStatePhase3, PAGE_SIZE);
 
   ZeroMem((void *)gRelocatedCpuStateDataPage, PAGE_SIZE);
   CopyMem((void *)gRelocatedCpuStateStart, SourceState, sizeof(*SourceState));
 
-  // Now add the mappings for stages two and three. 
+  // Now add the mappings for stages two and three.
   GenerateIntermediatePageTables();
 
   // Switch to the copy of the code in the target's address space
-  gRelocatedRestoreRegisters = (unsigned long)__va(gRelocatedRestoreRegisters);
+  gRelocatedResumeCpuStatePhase3 = (unsigned long)__va(gRelocatedResumeCpuStatePhase3);
   // The final page of the trampoline must be mapped in the
   // source page table. The source table will be the kernel's
   // offset map. Currently we just assume that a mostly arbitrary
   // location will be mapped. For that to work, we need to modify
   // the NX bit of the source page table. 
-  ClearPageNXFlag(cr3_to_pgt_pa(SourceState->cr3), gRelocatedRestoreRegisters);
+  ClearPageNXFlag(cr3_to_pgt_pa(SourceState->cr3), gRelocatedResumeCpuStatePhase3);
 
 
   SystemTable->ConOut->OutputString(SystemTable->ConOut, L"Starting Trampoline\r\n");

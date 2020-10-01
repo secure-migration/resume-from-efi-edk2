@@ -5,7 +5,7 @@
   DEFAULT REL
   SECTION .text
 
-extern ASM_PFX(gRelocatedRestoreRegisters)
+extern ASM_PFX(gRelocatedResumeCpuStatePhase3)
 extern ASM_PFX(gTempPGT)
 extern ASM_PFX(gMMUCR4Features)
 extern ASM_PFX(gRelocatedResumeCpuStatePhase2)
@@ -105,7 +105,7 @@ global ASM_PFX(ResumeCpuStatePhase1)
 ASM_PFX(ResumeCpuStatePhase1):
 
     DBG_PRINT 'RSTR1:74'
-    mov     r8, qword [gRelocatedRestoreRegisters]
+    mov     r8, qword [gRelocatedResumeCpuStatePhase3]
 
     DBG_PRINT 'RSTR1:78'
     mov     r11, qword [gTempPGT]
@@ -127,8 +127,8 @@ ASM_PFX(ResumeCpuStatePhase1):
 ; Inputs:
 ;   r11 - Intermediate PGD
 ;   rbx - Value of CR4
-;   r8  - Address of the relocated RestoreRegisters (must be mapped both
-;         in intermediate and target page tables)
+;   r8  - Address of the relocated ResumeCpuStatePhase3 (must be mapped both
+;         in intermediate and source page tables)
 ;
 ALIGN EFI_PAGE_SIZE
 global ASM_PFX(ResumeCpuStatePhase2)
@@ -155,18 +155,18 @@ ASM_PFX(ResumeCpuStatePhase2):
     ; Enable PGE back on
     mov     cr4, rbx
 
-    ; Jump to the relocated RestoreRegisters
+    ; Jump to the relocated ResumeCpuStatePhase3
     jmp	r8
 
 
 ; The CpuStateDataPage (which holds the struct cpu_state) is
-; positioned exactly 1 page (0x1000 bytes) after RestoreRegisters. From any
-; instruction inside RestoreRegisters we can use this RIP-relative addressing
-; to access the cpu_state struct.
-%define CPU_DATA rel RestoreRegisters + 0x1000 + CPU_STATE_OFFSET_IN_PAGE
+; positioned exactly 1 page (0x1000 bytes) after ResumeCpuStatePhase3. From any
+; instruction inside ResumeCpuStatePhase3 we can use this RIP-relative
+; addressing to access the cpu_state struct.
+%define CPU_DATA rel ResumeCpuStatePhase3 + 0x1000 + CPU_STATE_OFFSET_IN_PAGE
 
 ;
-; Phase 3 switches from the intermediate page table to the target page table
+; Phase 3 switches from the intermediate page table to the source page table
 ; (the same one that was active in the source VM), and then continues to
 ; restore all the CPU registers.
 ;
@@ -181,15 +181,15 @@ ASM_PFX(ResumeCpuStatePhase2):
 ;   rbx - Value of CR4
 ;
 ALIGN EFI_PAGE_SIZE
-global ASM_PFX(RestoreRegisters)
-ASM_PFX(RestoreRegisters):
-RestoreRegistersStart:
+global ASM_PFX(ResumeCpuStatePhase3)
+ASM_PFX(ResumeCpuStatePhase3):
+ResumeCpuStatePhase3Start:
 
     ; Prevent interrupts during this restore; the final iretq will restore
     ; RFLAGS, which will return the interrupt flag back to its original state
     cli
 
-    ; Switch to the target page tables
+    ; Switch to the source page tables
     DBG_PRINT 'DBG:70'
     mov     rcx, [CPU_DATA + STATE_CR3]
     mov     cr3, rcx
@@ -388,26 +388,31 @@ RestoreRegistersStart:
 
     jmp     $                    ; Never reached
 
-RestoreRegistersEnd:
+ResumeCpuStatePhase3End:
 
 ;
-; Verify that RestoreRegisters fits in one page
+; Verify that ResumeCpuStatePhase3 fits in one page
 ;
-%if (RestoreRegistersEnd - RestoreRegistersStart) >= EFI_PAGE_SIZE
-  %assign rr_size RestoreRegistersEnd - RestoreRegistersStart
-  %error Size of RestoreRegisters ( rr_size bytes ) is bigger than one page ( EFI_PAGE_SIZE bytes )
+%if (ResumeCpuStatePhase3End - ResumeCpuStatePhase3Start) >= EFI_PAGE_SIZE
+  %assign phase3_size ResumeCpuStatePhase3End - ResumeCpuStatePhase3Start
+  %error Size of ResumeCpuStatePhase3 ( phase3_size bytes ) is bigger than one page ( EFI_PAGE_SIZE bytes )
 %endif
 
 
   SECTION .data
 
 ;
-; The CpuStateDataPage is located exactly 4096 bytes after the step 3 page
-; such that all the references to it inside step 3 are relative.
+; The CpuStateDataPage is located exactly 4096 bytes after the phase 3 page
+; such that all the references to it inside phase 3 are relative.
 ;
 ALIGN EFI_PAGE_SIZE
 CpuStateDataPage:
     TIMES EFI_PAGE_SIZE DB 0
+
+; ---------------------------------------------------------
+;
+; Save pages for the intermediate page table (4 levels).
+;
 
 global ASM_PFX(pgd)
 global ASM_PFX(pud)
