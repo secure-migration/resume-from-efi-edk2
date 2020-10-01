@@ -153,13 +153,13 @@ static void GenerateIntermediatePageTables(){
   // since OVMF has a direct mapping, VA = PA
   AddPageToMapping(gRelocatedResumeCpuStatePhase2,gRelocatedResumeCpuStatePhase2);
   AddPageToMapping(gRelocatedRestoreRegisters,gRelocatedRestoreRegisters);
-  AddPageToMapping(gRelocatedRestoreRegistersData,gRelocatedRestoreRegistersData);
+  AddPageToMapping(gRelocatedCpuStateDataPage,gRelocatedCpuStateDataPage);
 
   // Map the same physical pages also with the virtual addresses that will
   // refer to these pages in the Linux kernel's page mapping (offset mapping):
   AddPageToMapping((unsigned long)__va(gRelocatedResumeCpuStatePhase2),gRelocatedResumeCpuStatePhase2);
   AddPageToMapping((unsigned long)__va(gRelocatedRestoreRegisters),gRelocatedRestoreRegisters);
-  AddPageToMapping((unsigned long)__va(gRelocatedRestoreRegistersData),gRelocatedRestoreRegistersData);
+  AddPageToMapping((unsigned long)__va(gRelocatedCpuStateDataPage),gRelocatedCpuStateDataPage);
 
   gTempPGT = (UINT64)pgd;
 }
@@ -202,15 +202,15 @@ MigrationHandlerMain(
   // with a HOB in PEI.
   gRelocatedResumeCpuStatePhase2 = PcdGet32(PcdSevMigrationPagesBase);
   gRelocatedRestoreRegisters = gRelocatedResumeCpuStatePhase2 + PAGE_SIZE;
-  gRelocatedRestoreRegistersData = gRelocatedRestoreRegisters + PAGE_SIZE;
+  gRelocatedCpuStateDataPage = gRelocatedRestoreRegisters + PAGE_SIZE;
 
-  UINT64 gRelocatedRestoreRegistersDataStart = gRelocatedRestoreRegistersData + CPU_STATE_OFFSET_IN_PAGE; // Extra 8 bytes so the IRETQ frame is 16-bytes aligned
+  UINT64 gRelocatedCpuStateStart = gRelocatedCpuStateDataPage + CPU_STATE_OFFSET_IN_PAGE; // Extra 8 bytes so the IRETQ frame is 16-bytes aligned
 
   CopyMem((void *)gRelocatedResumeCpuStatePhase2,ResumeCpuStatePhase2,PAGE_SIZE);
   CopyMem((void *)gRelocatedRestoreRegisters,RestoreRegisters,PAGE_SIZE);
-  
-  ZeroMem((void *)gRelocatedRestoreRegistersData, PAGE_SIZE);
-  CopyMem((void *)gRelocatedRestoreRegistersDataStart,SourceState,sizeof(*SourceState));
+
+  ZeroMem((void *)gRelocatedCpuStateDataPage, PAGE_SIZE);
+  CopyMem((void *)gRelocatedCpuStateStart, SourceState, sizeof(*SourceState));
 
   // Now add the mappings for stages two and three. 
   GenerateIntermediatePageTables();

@@ -6,7 +6,6 @@
   SECTION .text
 
 extern ASM_PFX(gRelocatedRestoreRegisters)
-extern ASM_PFX(gRelocatedRestoreRegistersData)
 extern ASM_PFX(gTempPGT)
 extern ASM_PFX(gMMUCR4Features)
 extern ASM_PFX(gRelocatedResumeCpuStatePhase2)
@@ -107,7 +106,6 @@ ASM_PFX(ResumeCpuStatePhase1):
 
     DBG_PRINT 'RSTR1:74'
     mov     r8, qword [gRelocatedRestoreRegisters]
-    mov     r10, qword [gRelocatedRestoreRegistersData]
 
     DBG_PRINT 'RSTR1:78'
     mov     r11, qword [gTempPGT]
