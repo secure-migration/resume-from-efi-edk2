@@ -14,6 +14,7 @@ extern ASM_PFX(gRelocatedRestoreStep2)
 %define X86_CR4_PGE     BIT7
 
 %define FLAG_POSITION   0xf00
+%define FLAG_RESTORE_MEMORY_AND_DEVICES_FINISHED 0x3c3c3c3c3c3c3c3c
 
 ;
 ;arg 1:Char to print
@@ -86,6 +87,21 @@ extern ASM_PFX(gRelocatedRestoreStep2)
     wrmsr                             ; Write edx:eax into the MSR
 %endmacro
 
+;
+; arg 1: MSR address
+; arg 2: Lower 32-bit value to set
+;
+%macro WRITE_MSR32 2
+    mov     ecx, %1            ; MSR address
+    mov     eax, %2            ; Load low 32-bits into eax
+    xor     edx, edx           ; Load high 32-bits into edx (=0)
+    wrmsr                      ; Write edx:eax into the MSR
+%endmacro
+
+;
+; Phase 1 prepares copies all needed values from global variables into
+; registers so that phase 2 and 3 don't need to use the stack.
+;
 global ASM_PFX(RestoreStep1)
 ASM_PFX(RestoreStep1):
 
@@ -101,10 +117,14 @@ ASM_PFX(RestoreStep1):
     mov     rcx, qword [gRelocatedRestoreStep2]
     jmp     rcx
 
+;
 ; Phase 2 switches from the OVMF page tables to the intermediate page tables. It
 ; is relocated to a page which has the same virtual address in both the OVMF
 ; page tables and the intermediate page tables, so it keeps executing after CR3
 ; is switched.
+;
+; We don't set up proper space for stack, so this code doesn't use the stack at
+; all.
 ;
 ; Inputs:
 ;   r11 - Intermediate PGD
@@ -147,12 +167,21 @@ ASM_PFX(RestoreStep2):
 ; to access the cpu_state struct.
 %define CPU_DATA rel RestoreRegisters + 0x1000 + CPU_STATE_OFFSET_IN_PAGE
 
+;
+; Phase 3 switches from the intermediate page table to the target page table
+; (the same one that was active in the source VM), and then continues to
+; restore all the CPU registers.
+;
+; We don't set up proper space for stack, so this code doesn't use the stack at
+; all.
+;
 ; Inputs:
 ;   As explained above in CPU_DATA, this code expects the CpuStateDataPage
 ;   which holds struct cpu_state to be exactly one page (0x1000 bytes) after
 ;   the beginning of this function.
 ;
 ;   rbx - Value of CR4
+;
 ALIGN EFI_PAGE_SIZE
 global ASM_PFX(RestoreRegisters)
 ASM_PFX(RestoreRegisters):
@@ -181,16 +210,19 @@ RestoreRegistersStart:
     mov     rcx, cr3
     mov     cr3, rcx
 
-    ; Enable PGE back on
+    ; Restore CR4: Enable PGE back on
     DBG_PRINT 'DBG:SETCR4_B'
     mov     cr4, rbx
 
+    ; Restore CR0 (but with the WP turned off)
     DBG_PRINT 'DBG:110'
     mov     r9, qword [CPU_DATA + STATE_CR0]
     ; Clear WP (Write-Protect) bit of CR0 - this is needed to allow
-    ; calling `ltr` later in the process
+    ; executing `ltr` later in the process
     btr     r9, 16
     mov     cr0, r9
+
+    ; Restore CR2
     DBG_PRINT 'DBG:120'
     mov     r9, qword [CPU_DATA + STATE_CR2]
     mov     cr2, r9
@@ -198,12 +230,22 @@ RestoreRegistersStart:
     DBG_PRINT 'DBG:EFER'
     RESTORE_MSR 0xc0000080, STATE_EFER
 
-    ;; --- Start memory restore
+    ; --- Start memory and devices restore
+    ;
+    ; At this point the handler stalls in a busy loop until the memory
+    ; location of the flag holds the a value that indicates the restore is
+    ; finished (FLAG_RESTORE_MEMORY_AND_DEVICES_FINISHED).
+    ;
+    ; Out tooling instructions QEMU to load the the target VM's memory and
+    ; devices state.  After these are restored, QEMU sets the flag memory
+    ; location to the expected flag value which causes the resume state
+    ; code to continue running.
+    ;
     DBG_PRINT 'TIME1'
     DBG_PUT_TIME
 
     DBG_PRINT 'DBG:STALL'
-    mov     r11, 0x3c3c3c3c3c3c3c3c   ; Expected value
+    mov     r11, FLAG_RESTORE_MEMORY_AND_DEVICES_FINISHED
     lea     r10, [CPU_DATA + FLAG_POSITION]
     DBG_PUT_REG r10
     mov     r10, [CPU_DATA + FLAG_POSITION]
@@ -219,9 +261,10 @@ RestoreRegistersStart:
 .wait_done:
     DBG_PRINT 'TIME2'
     DBG_PUT_TIME
-    ;; --- End memory restore
+    ;
+    ; --- End memory and devices restore
 
-    ; Force flush TLB
+    ; Force flush TLB again because memory was reloaded
     mov     rcx, cr3
     mov     cr3, rcx
 
@@ -249,10 +292,11 @@ RestoreRegistersStart:
     ; Restore IDT
     lidt    [CPU_DATA + STATE_IDT]
     DBG_PRINT 'DBG:LDT'
-    ; Restore LDT to zero - TODO maybe need to restore from State
+    ; Restore LDT to zero (note: maybe need to restore from the saved state)
     xor     ax, ax
     lldt    ax
 
+    ; Restore segment registers
     DBG_PRINT 'DBG:SEG_DS'
     mov     ax, [CPU_DATA + STATE_DS]
     mov     ds, ax
@@ -265,6 +309,8 @@ RestoreRegistersStart:
     DBG_PRINT 'DBG:SEG_GS'
     mov     ax, [CPU_DATA + STATE_GS]
     mov     gs, ax
+
+    ; Restore selected MSRs
     DBG_PRINT 'DBG:STAR'
     RESTORE_MSR 0xc0000081, STATE_STAR
     DBG_PRINT 'DBG:LSTAR'
@@ -282,6 +328,7 @@ RestoreRegistersStart:
     DBG_PRINT 'DBG:TSC_AUX'
     RESTORE_MSR 0xc0000103, STATE_TSC_AUX
 
+    ; Restore task register
     DBG_PRINT 'DBG:TR'
     mov     ax, [CPU_DATA + STATE_TR]
     ltr     ax
@@ -291,39 +338,25 @@ RestoreRegistersStart:
     mov     r9, qword [CPU_DATA + STATE_CR0]
     mov     cr0, r9
 
-; ----------------------------------
-;
-; TODO This section contains hard-coded values that should be extracted from the source state
-;
+    ; ----------------------------------
+    ;
+    ; Note: This section contains hard-coded values that eventually should be
+    ; extracted from the source VM state.
+    ;
 
     DBG_PRINT 'DBG:TSC'
-    mov     ecx, 0x10          ; MSR address
+    mov     ecx, 0x10          ; MSR address 10h TSC
     mov     eax, 0             ; Load low 32-bits into eax
     mov     edx, 9             ; Load high 32-bits into edx
     wrmsr                      ; Write edx:eax into the MSR
 
     DBG_PRINT 'DBG:APIC0'
-    mov     ecx, 0x835         ; MSR address = APIC register 350h LVT0
-    mov     eax, 0x10700       ; Load low 32-bits into eax
-    xor     edx, edx           ; Load high 32-bits into edx
-    wrmsr                      ; Write edx:eax into the MSR
-    DBG_PRINT 'DBG:APICS'
-    mov     ecx, 0x80f         ; MSR address = APIC register 0f0h SPIV Spurious Interrupt Vector Register
-    mov     eax, 0x1ff         ; Load low 32-bits into eax
-    xor     edx, edx           ; Load high 32-bits into edx
-    wrmsr                      ; Write edx:eax into the MSR
-    DBG_PRINT 'DBG:APIC1'
-    mov     ecx, 0x838         ; MSR address = APIC register 380h Timer Initial Count Register
-    mov     eax, 0x3cf53       ; Load low 32-bits into eax
-    xor     edx, edx           ; Load high 32-bits into edx
-    wrmsr                      ; Write edx:eax into the MSR
-    DBG_PRINT 'DBG:APIC2'
-    mov     ecx, 0x832         ; MSR address = APIC register 320h Timer Local Vector Table Entry
-    mov     eax, 0xec          ; Load low 32-bits into eax
-    xor     edx, edx           ; Load high 32-bits into edx
-    wrmsr                      ; Write edx:eax into the MSR
-    DBG_PRINT 'DBG:APIC3'
+    WRITE_MSR32 0x835, 0x10700 ; APIC register 350h LVT0
+    WRITE_MSR32 0x80f, 0x1ff   ; APIC register 0f0h SPIV Spurious Interrupt Vector Register
+    WRITE_MSR32 0x838, 0x3cf53 ; APIC register 380h Timer Initial Count Register
+    WRITE_MSR32 0x832, 0xec    ; APIC register 320h Timer Local Vector Table Entry
 
+    ; Clear any waiting EOIs
 %define APIC_IR_REGS 8
 %define APIC_IR_BITS (APIC_IR_REGS * 32)
 %define REPETITIONS  16
@@ -337,10 +370,10 @@ RestoreRegistersStart:
     cmp     rdi, 0
     jne     .innerloop
 
-;
-; TODO End of hard-coded section
-;
-; ----------------------------------
+    ;
+    ; TODO End of hard-coded section
+    ;
+    ; ----------------------------------
 
     DBG_PRINT 'DBG:400'
     ; Restored clobbered registers
