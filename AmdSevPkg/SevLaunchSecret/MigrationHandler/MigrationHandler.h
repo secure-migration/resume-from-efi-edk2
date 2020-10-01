@@ -16,7 +16,7 @@
 UINT64 gRelocatedResumeCpuStatePhase3;
 UINT64 gRelocatedCpuStateDataPage;
 UINT64 gIntermediateCR3;
-UINT64 gMMUCR4Features;
+UINT64 gSourceCpuStateCR4;
 UINT64 gRelocatedResumeCpuStatePhase2;
 
 // Defined in RestoreState.nasm

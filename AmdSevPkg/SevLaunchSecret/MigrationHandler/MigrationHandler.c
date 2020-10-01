@@ -187,7 +187,7 @@ MigrationHandlerMain(
   char *magicstr = SourceState->magic;
   DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER SourceState->magic = %a\n", magicstr);
 
-  gMMUCR4Features = SourceState->cr4;
+  gSourceCpuStateCR4 = SourceState->cr4;
 
   // We need to be somewhat careful about how we setup the 
   // pages for our trampoline.

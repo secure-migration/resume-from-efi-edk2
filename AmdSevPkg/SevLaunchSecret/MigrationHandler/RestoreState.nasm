@@ -7,7 +7,7 @@
 
 extern ASM_PFX(gRelocatedResumeCpuStatePhase3)
 extern ASM_PFX(gIntermediateCR3)
-extern ASM_PFX(gMMUCR4Features)
+extern ASM_PFX(gSourceCpuStateCR4)
 extern ASM_PFX(gRelocatedResumeCpuStatePhase2)
 
 %define X86_CR4_PGE     BIT7
@@ -109,7 +109,7 @@ ASM_PFX(ResumeCpuStatePhase1):
 
     DBG_PRINT 'RSTR1:78'
     mov     r11, qword [gIntermediateCR3]
-    mov     rbx, qword [gMMUCR4Features]
+    mov     rbx, qword [gSourceCpuStateCR4]
 
     DBG_PRINT 'RSTR1:81'
     mov     rcx, qword [gRelocatedResumeCpuStatePhase2]
