@@ -17,11 +17,11 @@ UINT64 gRelocatedRestoreRegisters;
 UINT64 gRelocatedRestoreRegistersData;
 UINT64 gTempPGT;
 UINT64 gMMUCR4Features;
-UINT64 gRelocatedRestoreStep2;
+UINT64 gRelocatedResumeCpuStatePhase2;
 
 // Defined in RestoreState.nasm
 void ResumeCpuStatePhase1(void);
-void RestoreStep2(void);
+void ResumeCpuStatePhase2(void);
 void RestoreRegisters(void);
 
 /*

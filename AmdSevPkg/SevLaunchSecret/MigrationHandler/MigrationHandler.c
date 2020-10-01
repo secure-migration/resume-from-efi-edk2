@@ -151,13 +151,13 @@ static void AddPageToMapping(unsigned long va, unsigned long pa){
 // that maps the code for both stage 2 and stage 3.
 static void GenerateIntermediatePageTables(){
   // since OVMF has a direct mapping, VA = PA
-  AddPageToMapping(gRelocatedRestoreStep2,gRelocatedRestoreStep2);
+  AddPageToMapping(gRelocatedResumeCpuStatePhase2,gRelocatedResumeCpuStatePhase2);
   AddPageToMapping(gRelocatedRestoreRegisters,gRelocatedRestoreRegisters);
   AddPageToMapping(gRelocatedRestoreRegistersData,gRelocatedRestoreRegistersData);
 
   // Map the same physical pages also with the virtual addresses that will
   // refer to these pages in the Linux kernel's page mapping (offset mapping):
-  AddPageToMapping((unsigned long)__va(gRelocatedRestoreStep2),gRelocatedRestoreStep2);
+  AddPageToMapping((unsigned long)__va(gRelocatedResumeCpuStatePhase2),gRelocatedResumeCpuStatePhase2);
   AddPageToMapping((unsigned long)__va(gRelocatedRestoreRegisters),gRelocatedRestoreRegisters);
   AddPageToMapping((unsigned long)__va(gRelocatedRestoreRegistersData),gRelocatedRestoreRegistersData);
 
@@ -200,13 +200,13 @@ MigrationHandlerMain(
   // need to be mapped in our intermediate page table. First, 
   // we will move them to a known address that we set aside 
   // with a HOB in PEI.
-  gRelocatedRestoreStep2 = PcdGet32(PcdSevMigrationPagesBase);
-  gRelocatedRestoreRegisters = gRelocatedRestoreStep2 + PAGE_SIZE;
+  gRelocatedResumeCpuStatePhase2 = PcdGet32(PcdSevMigrationPagesBase);
+  gRelocatedRestoreRegisters = gRelocatedResumeCpuStatePhase2 + PAGE_SIZE;
   gRelocatedRestoreRegistersData = gRelocatedRestoreRegisters + PAGE_SIZE;
 
   UINT64 gRelocatedRestoreRegistersDataStart = gRelocatedRestoreRegistersData + CPU_STATE_OFFSET_IN_PAGE; // Extra 8 bytes so the IRETQ frame is 16-bytes aligned
 
-  CopyMem((void *)gRelocatedRestoreStep2,RestoreStep2,PAGE_SIZE);
+  CopyMem((void *)gRelocatedResumeCpuStatePhase2,ResumeCpuStatePhase2,PAGE_SIZE);
   CopyMem((void *)gRelocatedRestoreRegisters,RestoreRegisters,PAGE_SIZE);
   
   ZeroMem((void *)gRelocatedRestoreRegistersData, PAGE_SIZE);

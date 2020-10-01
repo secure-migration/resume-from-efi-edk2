@@ -9,7 +9,7 @@ extern ASM_PFX(gRelocatedRestoreRegisters)
 extern ASM_PFX(gRelocatedRestoreRegistersData)
 extern ASM_PFX(gTempPGT)
 extern ASM_PFX(gMMUCR4Features)
-extern ASM_PFX(gRelocatedRestoreStep2)
+extern ASM_PFX(gRelocatedResumeCpuStatePhase2)
 
 %define X86_CR4_PGE     BIT7
 
@@ -114,7 +114,7 @@ ASM_PFX(ResumeCpuStatePhase1):
     mov     rbx, qword [gMMUCR4Features]
 
     DBG_PRINT 'RSTR1:81'
-    mov     rcx, qword [gRelocatedRestoreStep2]
+    mov     rcx, qword [gRelocatedResumeCpuStatePhase2]
     jmp     rcx
 
 ;
@@ -133,8 +133,8 @@ ASM_PFX(ResumeCpuStatePhase1):
 ;         in intermediate and target page tables)
 ;
 ALIGN EFI_PAGE_SIZE
-global ASM_PFX(RestoreStep2)
-ASM_PFX(RestoreStep2):
+global ASM_PFX(ResumeCpuStatePhase2)
+ASM_PFX(ResumeCpuStatePhase2):
 
     ; Switch to intermediate PGD (from r11)
     DBG_PRINT 'RSTR2:96'
