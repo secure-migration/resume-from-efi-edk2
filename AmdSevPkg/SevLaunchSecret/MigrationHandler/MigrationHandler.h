@@ -14,7 +14,7 @@
 // Variables used by RestoreState.nasm
 //
 UINT64 gRelocatedRestoreRegisters;
-UINT64 gRelocatedRestoreRegistersData;
+UINT64 gRelocatedCpuStateDataPage;
 UINT64 gTempPGT;
 UINT64 gMMUCR4Features;
 UINT64 gRelocatedResumeCpuStatePhase2;
