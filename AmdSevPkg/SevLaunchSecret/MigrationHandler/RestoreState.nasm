@@ -336,8 +336,7 @@ ResumeCpuStatePhase3Start:
     mov     r9, qword [CPU_DATA + STATE_CR0]
     mov     cr0, r9
 
-    ; ----------------------------------
-    ;
+    ; ------------------------------------------------------------------------
     ; Note: This section contains hard-coded values that eventually should be
     ; extracted from the source VM state.
     ;
@@ -354,6 +353,10 @@ ResumeCpuStatePhase3Start:
     WRITE_MSR32 0x838, 0x3cf53 ; APIC register 380h Timer Initial Count Register
     WRITE_MSR32 0x832, 0xec    ; APIC register 320h Timer Local Vector Table Entry
 
+    ;
+    ; End of hard-coded values section
+    ; ------------------------------------------------------------------------
+
     ; Clear any waiting EOIs
 %define APIC_IR_REGS 8
 %define APIC_IR_BITS (APIC_IR_REGS * 32)
@@ -367,11 +370,6 @@ ResumeCpuStatePhase3Start:
     dec     rdi
     cmp     rdi, 0
     jne     .innerloop
-
-    ;
-    ; TODO End of hard-coded section
-    ;
-    ; ----------------------------------
 
     DBG_PRINT 'DBG:400'
     ; Restored clobbered registers
