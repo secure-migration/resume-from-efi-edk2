@@ -6,7 +6,7 @@
   SECTION .text
 
 extern ASM_PFX(gRelocatedResumeCpuStatePhase3)
-extern ASM_PFX(gTempPGT)
+extern ASM_PFX(gIntermediateCR3)
 extern ASM_PFX(gMMUCR4Features)
 extern ASM_PFX(gRelocatedResumeCpuStatePhase2)
 
@@ -108,7 +108,7 @@ ASM_PFX(ResumeCpuStatePhase1):
     mov     r8, qword [gRelocatedResumeCpuStatePhase3]
 
     DBG_PRINT 'RSTR1:78'
-    mov     r11, qword [gTempPGT]
+    mov     r11, qword [gIntermediateCR3]
     mov     rbx, qword [gMMUCR4Features]
 
     DBG_PRINT 'RSTR1:81'
@@ -125,7 +125,7 @@ ASM_PFX(ResumeCpuStatePhase1):
 ; all.
 ;
 ; Inputs:
-;   r11 - Intermediate PGD
+;   r11 - Intermediate CR3
 ;   rbx - Value of CR4
 ;   r8  - Address of the relocated ResumeCpuStatePhase3 (must be mapped both
 ;         in intermediate and source page tables)

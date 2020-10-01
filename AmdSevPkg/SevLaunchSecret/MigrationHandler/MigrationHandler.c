@@ -161,7 +161,7 @@ static void GenerateIntermediatePageTables(){
   AddPageToMapping((unsigned long)__va(gRelocatedResumeCpuStatePhase3), gRelocatedResumeCpuStatePhase3);
   AddPageToMapping((unsigned long)__va(gRelocatedCpuStateDataPage), gRelocatedCpuStateDataPage);
 
-  gTempPGT = (UINT64)pgd;
+  gIntermediateCR3 = (UINT64)pgd;
 }
 
 
