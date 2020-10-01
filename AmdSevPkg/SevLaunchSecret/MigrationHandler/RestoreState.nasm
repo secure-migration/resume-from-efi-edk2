@@ -101,17 +101,22 @@ ASM_PFX(RestoreStep1):
     mov     rcx, qword [gRelocatedRestoreStep2]
     jmp     rcx
 
+; Phase 2 switches from the OVMF page tables to the intermediate page tables. It
+; is relocated to a page which has the same virtual address in both the OVMF
+; page tables and the intermediate page tables, so it keeps executing after CR3
+; is switched.
+;
 ; Inputs:
-;   r11 - Temporary PGD
-;   rbx - Content of CR4
-;   r8  - Address of target RestoreRegisters (must be mapped both
-;         in temporay and target page tables)
+;   r11 - Intermediate PGD
+;   rbx - Value of CR4
+;   r8  - Address of the relocated RestoreRegisters (must be mapped both
+;         in intermediate and target page tables)
 ;
 ALIGN EFI_PAGE_SIZE
 global ASM_PFX(RestoreStep2)
 ASM_PFX(RestoreStep2):
 
-    ; Switch to temporary PGD (from r11)
+    ; Switch to intermediate PGD (from r11)
     DBG_PRINT 'RSTR2:96'
     mov     cr3, r11
     DBG_PRINT 'RSTR2:98'
@@ -129,7 +134,7 @@ ASM_PFX(RestoreStep2):
     mov     rcx, cr3
     mov     cr3, rcx
 
-    ; Turn PGE back on
+    ; Enable PGE back on
     mov     cr4, rbx
 
     ; Jump to the relocated RestoreRegisters
@@ -147,12 +152,17 @@ ASM_PFX(RestoreStep2):
 ;   which holds struct cpu_state to be exactly one page (0x1000 bytes) after
 ;   the beginning of this function.
 ;
+;   rbx - Value of CR4
 ALIGN EFI_PAGE_SIZE
 global ASM_PFX(RestoreRegisters)
 ASM_PFX(RestoreRegisters):
+RestoreRegistersStart:
 
+    ; Prevent interrupts during this restore; the final iretq will restore
+    ; RFLAGS, which will return the interrupt flag back to its original state
     cli
 
+    ; Switch to the target page tables
     DBG_PRINT 'DBG:70'
     mov     rcx, [CPU_DATA + STATE_CR3]
     mov     cr3, rcx
@@ -171,7 +181,7 @@ ASM_PFX(RestoreRegisters):
     mov     rcx, cr3
     mov     cr3, rcx
 
-    ; Turn PGE back on
+    ; Enable PGE back on
     DBG_PRINT 'DBG:SETCR4_B'
     mov     cr4, rbx
 
@@ -340,15 +350,20 @@ ASM_PFX(RestoreRegisters):
     mov     rax, [CPU_DATA + STATE_REGS_ORIG_AX]
     ; Point RSP to to the iretq frame structure
     lea     rsp, [CPU_DATA + STATE_REGS_IP]
+
+    ; Atomically restore SS, RSP, RFLAGS, CS and RIP - and resume execution
+    ; from the saved CPU state
     iretq
 
-_end_of_RestoreRegisters:
+    jmp     $                    ; Never reached
+
+RestoreRegistersEnd:
 
 ;
 ; Verify that RestoreRegisters fits in one page
 ;
-%if (_end_of_RestoreRegisters - ASM_PFX(RestoreRegisters)) >= EFI_PAGE_SIZE
-  %assign rr_size _end_of_RestoreRegisters - ASM_PFX(RestoreRegisters)
+%if (RestoreRegistersEnd - RestoreRegistersStart) >= EFI_PAGE_SIZE
+  %assign rr_size RestoreRegistersEnd - RestoreRegistersStart
   %error Size of RestoreRegisters ( rr_size bytes ) is bigger than one page ( EFI_PAGE_SIZE bytes )
 %endif
 
