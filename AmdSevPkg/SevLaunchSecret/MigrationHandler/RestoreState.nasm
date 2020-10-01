@@ -5,10 +5,10 @@
   DEFAULT REL
   SECTION .text
 
-extern ASM_PFX(gRelocatedResumeCpuStatePhase3)
 extern ASM_PFX(gIntermediateCR3)
 extern ASM_PFX(gSourceCpuStateCR4)
 extern ASM_PFX(gRelocatedResumeCpuStatePhase2)
+extern ASM_PFX(gRelocatedResumeCpuStatePhase3)
 
 %define X86_CR4_PGE     BIT7
 

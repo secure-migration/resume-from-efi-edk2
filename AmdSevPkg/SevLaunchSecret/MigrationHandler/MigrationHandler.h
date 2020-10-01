@@ -2,7 +2,7 @@
 #include <Library/UefiDriverEntryPoint.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
-#include <Library/BaseLib.h> 
+#include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PrintLib.h>
@@ -13,11 +13,11 @@
 //
 // Variables used by RestoreState.nasm
 //
-UINT64 gRelocatedResumeCpuStatePhase3;
-UINT64 gRelocatedCpuStateDataPage;
 UINT64 gIntermediateCR3;
 UINT64 gSourceCpuStateCR4;
 UINT64 gRelocatedResumeCpuStatePhase2;
+UINT64 gRelocatedResumeCpuStatePhase3;
+UINT64 gRelocatedCpuStateDataPage;
 
 // Defined in RestoreState.nasm
 void ResumeCpuStatePhase1(void);
