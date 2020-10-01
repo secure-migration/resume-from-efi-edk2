@@ -102,8 +102,8 @@ extern ASM_PFX(gRelocatedRestoreStep2)
 ; Phase 1 prepares copies all needed values from global variables into
 ; registers so that phase 2 and 3 don't need to use the stack.
 ;
-global ASM_PFX(RestoreStep1)
-ASM_PFX(RestoreStep1):
+global ASM_PFX(ResumeCpuStatePhase1)
+ASM_PFX(ResumeCpuStatePhase1):
 
     DBG_PRINT 'RSTR1:74'
     mov     r8, qword [gRelocatedRestoreRegisters]

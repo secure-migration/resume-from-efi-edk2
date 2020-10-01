@@ -19,6 +19,11 @@ UINT64 gTempPGT;
 UINT64 gMMUCR4Features;
 UINT64 gRelocatedRestoreStep2;
 
+// Defined in RestoreState.nasm
+void ResumeCpuStatePhase1(void);
+void RestoreStep2(void);
+void RestoreRegisters(void);
+
 /*
  * CREATING INTERMEDIATE PAGE TABLES
  *

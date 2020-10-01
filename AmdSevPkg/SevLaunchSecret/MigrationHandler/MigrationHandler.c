@@ -9,11 +9,6 @@
 #include "MigrationHandler.h"
 
 
-// Defined in RestoreState.nasm
-void RestoreRegisters(void);
-void RestoreStep1(void);
-void RestoreStep2(void);
-
 // helpers for pagetables. borrowed from Linux
 
 static inline pudval_t native_pud_val(pud_t pud)
@@ -231,10 +226,10 @@ MigrationHandlerMain(
 
 
   SystemTable->ConOut->OutputString(SystemTable->ConOut, L"Starting Trampoline\r\n");
-  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER calling RestoreStep1\n");
+  DebugPrint(DEBUG_ERROR,"MIGRATION HANDLER calling ResumeCpuStatePhase1\n");
 
   // start the trampoline
-  RestoreStep1(); 
+  ResumeCpuStatePhase1(); 
 
   return 0;
 }
