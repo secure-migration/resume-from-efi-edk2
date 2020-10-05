@@ -110,6 +110,8 @@
   gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseAddress
   gSevLaunchSecretGuid.PcdSevMigrationStatePageBase
   gSevLaunchSecretGuid.PcdSevMigrationStatePageSize
+  gSevLaunchSecretGuid.PcdSevMigrationPagesBase
+  gSevLaunchSecretGuid.PcdSevMigrationPagesSize
 
 [FeaturePcd]
   gUefiOvmfPkgTokenSpaceGuid.PcdCsmEnable
