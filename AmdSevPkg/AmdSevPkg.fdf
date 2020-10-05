@@ -129,7 +129,6 @@ READ_LOCK_STATUS   = TRUE
 # decompresses the PEI and DXE FVs which handles the rest of the boot sequence.
 #
 INF  OvmfPkg/Sec/SecMain.inf
-INF  RuleOverride=CONFIG_GUID AmdSevPkg/SevLaunchSecret/SecretSec/SecretSec.inf
 INF  RuleOverride=RESET_VECTOR OvmfPkg/ResetVector/ResetVector.inf
 
 ################################################################################
