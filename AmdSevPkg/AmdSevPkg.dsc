@@ -871,7 +871,7 @@
       gEfiShellPkgTokenSpaceGuid.PcdShellLibAutoInitialize|FALSE
   }
   AmdSevPkg/Grub/Grub.inf
-  AmdSevPkg/SevLaunchSecret/MigrationHandler/MigrationHandler.inf
+  AmdSevPkg/ResumeFromEfi/MigrationHandler.inf
   ShellPkg/Application/Shell/Shell.inf {
     <LibraryClasses>
       ShellCommandLib|ShellPkg/Library/UefiShellCommandLib/UefiShellCommandLib.inf

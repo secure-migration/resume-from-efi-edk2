@@ -34,7 +34,7 @@
   SecurityPkg/SecurityPkg.dec
   ShellPkg/ShellPkg.dec
   AmdSevPkg/Grub/Grub.dec
-  AmdSevPkg/SevLaunchSecret/MigrationHandler/MigrationHandler.dec
+  AmdSevPkg/ResumeFromEfi/MigrationHandler.dec
   AmdSevPkg/AmdSevPkg.dec
 
 [LibraryClasses]

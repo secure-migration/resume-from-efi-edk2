@@ -20,7 +20,7 @@
 
 [Packages]
   AmdSevPkg/AmdSevPkg.dec
-  AmdSevPkg/SevLaunchSecret/MigrationHandler/MigrationHandler.dec
+  AmdSevPkg/ResumeFromEfi/MigrationHandler.dec
   MdePkg/MdePkg.dec
   ShellPkg/ShellPkg.dec
 
@@ -29,15 +29,12 @@
   BaseMemoryLib
   MemoryAllocationLib
   DebugLib
-  #UefiBootServicesTableLib
-  #UefiDriverEntryPoint
   UefiLib
   UefiBootServicesTableLib
   PrintLib
   PcdLib
 
 [Guids]
-  #gSevLaunchSecretGuid
   gMigrationHandlerFileGuid
 
 [FixedPcd]
@@ -52,7 +49,6 @@
 [Pcd]
   gSevLaunchSecretGuid.PcdSevIsMigrationHandler
   gSevLaunchSecretGuid.PcdSevMigrationMailboxBase
-  #gSevLaunchSecretGuid.PcdSevMigrationPagesBase
 
 [Depex]
   TRUE
