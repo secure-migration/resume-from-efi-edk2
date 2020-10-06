@@ -309,7 +309,7 @@ INF  ShellPkg/Application/Shell/Shell.inf
 
 INF MdeModulePkg/Logo/LogoDxe.inf
 
-INF AmdSevPkg/SevLaunchSecret/SecretDxe/SecretDxe.inf
+#INF AmdSevPkg/SevLaunchSecret/SecretDxe/SecretDxe.inf
 
 #
 # Network modules
